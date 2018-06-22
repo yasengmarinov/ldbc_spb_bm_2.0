@@ -43,7 +43,13 @@ public class TestDriverReporter extends Thread {
 	
 	private final static Logger LOGGER = LoggerFactory.getLogger(TestDriverReporter.class.getName());
 	
-	public TestDriverReporter(AtomicLong totalQueryExecutions, AtomicLong totalCompletedQueryMixRuns, AtomicBoolean benchmarkState, AtomicBoolean keepAlive, AtomicBoolean benchmarkResultIsValid, double updateQueryRateFirstReachTimePercent, double minUpdateQueriesRateThresholdOps, double maxUpdateRateThresholdOps, AtomicBoolean maxUpdateRateReached, List<AbstractAsynchronousAgent> editorialAgentsList, List<AbstractAsynchronousAgent> aggregationAgentsList, long runPeriodSeconds, /*long benchmarkByQueryMixRuns, long benchmarkByQueryRuns, */String queryPoolsDefinitons, int reportPeriodSeconds, int reportIntervalSeconds, boolean verbose) {
+	public TestDriverReporter(AtomicLong totalQueryExecutions, AtomicLong totalCompletedQueryMixRuns, AtomicBoolean benchmarkState, 
+							  AtomicBoolean keepAlive, AtomicBoolean benchmarkResultIsValid, double updateQueryRateFirstReachTimePercent, 
+							  double minUpdateQueriesRateThresholdOps, double maxUpdateRateThresholdOps, AtomicBoolean maxUpdateRateReached, 
+							  List<AbstractAsynchronousAgent> editorialAgentsList, List<AbstractAsynchronousAgent> aggregationAgentsList, 
+							  long runPeriodSeconds, /*long benchmarkByQueryMixRuns, long benchmarkByQueryRuns, */String queryPoolsDefinitons, 
+							  int reportPeriodSeconds, int reportIntervalSeconds, boolean verbose) {
+		
 		this.totalQueryExecutions = totalQueryExecutions;
 		this.totalCompletedQueryMixRuns = totalCompletedQueryMixRuns;
 		this.benchmarkState = benchmarkState;
@@ -81,7 +87,7 @@ public class TestDriverReporter extends Thread {
 			while (benchmarkState.get() || keepAlive.get()) {
 				Thread.sleep(Math.abs(reportIntervalSeconds * 1000 - timeCorreciton));
 				seconds = (long) ((System.currentTimeMillis() - startTime) / 1000);
-				timeCorreciton = collectAndShowResults(/*(benchmarkByQueryRuns == 0) && (benchmarkByQueryMixRuns == 0)*/);
+				timeCorreciton = collectAndShowResults(/*(benchmarkByQueryRuns == 0) && (benchmarkByQueryMixRuns == 0)*/);				
 			}
 		} catch (Throwable t) {
 			System.out.println("BenchmarkProcessObserver :: encountered a problem : " + t.getMessage());
@@ -242,7 +248,7 @@ public class TestDriverReporter extends Thread {
 					LOGGER.info(message);
 					System.out.println(message);
 				} else {
-					message = String.format("Warning : Update operations rate has not reached or has dropped below minimum threshold of %.1f ops, benchmark results are not valid!", minUpdateRateThresholdOps);
+					message = String.format("WARNING : Update operations rate has not reached or has dropped below minimum threshold of %.1f ops, benchmark results are not valid!", minUpdateRateThresholdOps);
 					LOGGER.warn(message);
 					System.out.println(message);
 					System.exit(0);
@@ -250,7 +256,7 @@ public class TestDriverReporter extends Thread {
 				return (System.currentTimeMillis() - time);
 			}
 		}
-		
+				
 		LOGGER.info(sb.toString());
 		System.out.println(sb.toString());	
 		
@@ -295,7 +301,7 @@ public class TestDriverReporter extends Thread {
 			
 			//averageOperationsPerSecond are dropping below the threshold - in which case the benchmark result is considered invalid
 			if ((averageOperationsPerSecond < minUpdateRateThresholdOps) && (minUpdateRatePassesCount == 1)) {
-				message = String.format("Warning : Current update operations rate : %.1f ops has dropped below minimum threshold %.1f at second : %d", averageOperationsPerSecond, minUpdateRateThresholdOps, seconds);
+				message = String.format("WARNING : Current update operations rate : %.1f ops has dropped below minimum threshold %.1f at second : %d", averageOperationsPerSecond, minUpdateRateThresholdOps, seconds);
 				minUpdateRatePassesCount++;
 				benchmarkResultIsValid.set(false);
 				LOGGER.warn(message);

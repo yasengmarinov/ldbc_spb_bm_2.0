@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.management.MalformedObjectNameException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +72,7 @@ public class TestDriver {
 	private final static Logger LOGGER = LoggerFactory.getLogger(TestDriver.class.getName());
 	private final static Logger RLOGGER = LoggerFactory.getLogger(TestDriverReporter.class.getName());
 	
-	public TestDriver(String[] args) throws IOException {
+	public TestDriver(String[] args) throws IOException, MalformedObjectNameException, InterruptedException {
 		
 		if( args.length < 1) {
 			throw new IllegalArgumentException("Missing parameter - the configuration file must be specified");
@@ -94,7 +96,6 @@ public class TestDriver {
 		editorialAgentsCount = configuration.getInt(Configuration.EDITORIAL_AGENTS_COUNT);
 		warmupPeriodSeconds = configuration.getInt(Configuration.WARMUP_PERIOD_SECONDS);
 		benchmarkRunPeriodSeconds = configuration.getInt(Configuration.BENCHMARK_RUN_PERIOD_SECONDS);
-
 
 		queryExecuteManager = new SparqlQueryExecuteManager(inBenchmarkState,
 				configuration.getString(Configuration.ENDPOINT_URL),
@@ -132,13 +133,17 @@ public class TestDriver {
 			
 			Collections.sort(collectedFiles);
 			
+			long batchStart = System.currentTimeMillis();
 			for( File file : collectedFiles ) {
 				System.out.print("\tloading " + file.getName());
 				InputStream input = new FileInputStream(file);
 				
+				long startTime = System.currentTimeMillis();
 				RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_TURTLE, input);
+				System.out.print(String.format(" [%,d ms]", (System.currentTimeMillis() - startTime)));
 				System.out.println();
 			}			
+			System.out.println(String.format("\ttotal time: %,d ms", (System.currentTimeMillis() - batchStart)));
 		}
 	}
 	
@@ -166,7 +171,7 @@ public class TestDriver {
 			}
 		}
 	}
-	 
+	
 	private void loadDatasets(boolean enable) throws IOException {
 		if (enable) {
 			System.out.println("Loading reference datasets...");
@@ -179,26 +184,48 @@ public class TestDriver {
 			
 			Collections.sort(collectedFiles);
 			
+			long batchStart = System.currentTimeMillis();
 			for( File file : collectedFiles ) {
 				System.out.print("\tloading " + file.getName());
 				InputStream input = new FileInputStream(file);
 				
+				long startTime = System.currentTimeMillis();
 				RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_TURTLE, input);
+				System.out.print(String.format(" [%,d ms]", (System.currentTimeMillis() - startTime)));
 				System.out.println();
-			}				
+			}
+			System.out.println(String.format("\ttotal time: %,d ms", (System.currentTimeMillis() - batchStart)));
 		}
 	}
 	
 	public void populateRefDataEntitiesLists(boolean showDetails, boolean populateFromDatasetInfoFile, boolean suppressDatasetInfoWarnings, String messagePrefix) throws IOException {
 		
 		if (showDetails) {
-			System.out.println(messagePrefix + "Analyzing existing reference knowledge in database, it may take a while...");
+			System.out.println(messagePrefix + "Analyzing reference knowledge in database...");
+		}
+				
+		//initialize dataset info, required for query parameters
+		boolean datasetInfoInitialized = false;
+		if (populateFromDatasetInfoFile) {
+			String datasetInfoFile = DataManager.buildDataInfoFilePath(configuration);
+			if (!datasetInfoFile.isEmpty()) {			
+				datasetInfoInitialized = DataManager.initDatasetInfo(datasetInfoFile, suppressDatasetInfoWarnings);
+			}
 		}
 		
-		//retrieve entity URIs from database
+		//retrieve entities
 		ReferenceDataAnalyzer refDataAnalyzer = new ReferenceDataAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
-		ArrayList<Entity> entitiesList = refDataAnalyzer.analyzeEntities();
-	
+				
+		String entitiesFilePath = configuration.getString(Configuration.CREATIVE_WORKS_PATH) + File.separator + "entities.txt";
+		ArrayList<Entity> entitiesList = refDataAnalyzer.initFromFile(entitiesFilePath);
+		if (entitiesList.size() == 0) {
+			System.out.println("\t\tretrieving entities from database");
+			entitiesList = refDataAnalyzer.initFromDatabase();
+			if (entitiesList.size() > 0) {
+				refDataAnalyzer.persistToFile(entitiesList, entitiesFilePath);
+			}
+		}
+
 		long popularEntitiesCount = (int)(entitiesList.size() * Definitions.entityPopularity.getAllocationsArray()[0]);
 		
 		for (int i = 0; i < entitiesList.size(); i++) {
@@ -210,47 +237,65 @@ public class TestDriver {
 			}
 		}
 
-		//retrieve the greatest id of creative works from database if not set explicitly in test.properties
+		//retrieve max value of Creative Work ID test.properties or dataset.info
 		long creativeWorksCount = configuration.getLong(Configuration.CREATIVE_WORK_NEXT_ID);
 		if (creativeWorksCount > 0) {
 			DataManager.creativeWorksNextId.set(creativeWorksCount);
-			System.out.println("\tNext id for Creative Works : " + creativeWorksCount);
-		} else {		
-			CreativeWorksAnalyzer cwk = new CreativeWorksAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
-			creativeWorksCount = cwk.getResult();		
-			DataManager.creativeWorksNextId.set(creativeWorksCount);
+			System.out.println("\tcreativeWorkNextId (test.properties): " + DataManager.creativeWorksNextId.get() + ", using its value");
+		} else {
+			if (DataManager.creativeWorksNextId.get() > 0) {
+				System.out.println("\tCreativeWorkId (dataset.info): " + DataManager.creativeWorksNextId.get());
+				creativeWorksCount = DataManager.creativeWorksNextId.get();
+			} else {
+				System.out.println("\t\tretrieving Creative Works count from database");
+				CreativeWorksAnalyzer cwk = new CreativeWorksAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
+				creativeWorksCount = cwk.getResult();		
+				DataManager.creativeWorksNextId.set(creativeWorksCount);
+			}
 		}
 
 		//retrieve DBpedia locations IDs from database
-		LocationsAnalyzer gna = new LocationsAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
-		ArrayList<String> locationsIds = gna.collectLocationsIds("analyzelocations.txt");
+		String locationsFilePath = configuration.getString(Configuration.CREATIVE_WORKS_PATH) + File.separator + "dbpediaLocations.txt";
+		LocationsAnalyzer locationsAnalyzer = new LocationsAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
+		ArrayList<String> locationsIds = locationsAnalyzer.initFromFile(locationsFilePath);
+		if (locationsIds.size() == 0) {
+			System.out.println("\t\tretrieving dbpedia locations from database");
+			locationsIds = locationsAnalyzer.collectLocationsIds("analyzelocations.txt");
+			if (locationsIds.size() > 0) {
+				locationsAnalyzer.persistToFile(locationsIds, locationsFilePath);
+			}
+		}
 
 		for (String s : locationsIds) {
 			DataManager.locationsIdsList.add(s);
 		}
-		
+
 		locationsIds.clear();
 		
 		//retrieve Geonames locations IDs from database
-		gna = new LocationsAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
-		locationsIds = gna.collectLocationsIds("analyzegeonames.txt");
+		locationsFilePath = configuration.getString(Configuration.CREATIVE_WORKS_PATH) + File.separator + "geonamesLocations.txt";
+		locationsAnalyzer = new LocationsAnalyzer(queryExecuteManager, mustacheTemplatesHolder);
+		locationsIds = locationsAnalyzer.initFromFile(locationsFilePath);
+		if (locationsIds.size() == 0) {
+			System.out.println("\t\tretrieving geonames locations from database");
+			locationsIds = locationsAnalyzer.collectLocationsIds("analyzegeonames.txt");
+			if (locationsIds.size() > 0) {
+				locationsAnalyzer.persistToFile(locationsIds, locationsFilePath);
+			}
+		}
 
 		for (String s : locationsIds) {
 			DataManager.geonamesIdsList.add(s);
 		}
 		
-		//initialize dataset info, required for query parameters
-		if (populateFromDatasetInfoFile) {
-			if ((DataManager.correlatedEntitiesList.size() + DataManager.exponentialDecayEntitiesMinorList.size() + DataManager.exponentialDecayEntitiesMajorList.size()) == 0) {
-				String datasetInfoFile = DataManager.buildDataInfoFilePath(configuration);
-				if (!datasetInfoFile.isEmpty()) {			
-					DataManager.initDatasetInfo(datasetInfoFile, suppressDatasetInfoWarnings);
-				}
+		if (populateFromDatasetInfoFile && datasetInfoInitialized) {
+			if (!DataManager.checkReferenceDataConsistency()) {
+				System.out.println("WARNING: inconsistent number of expected and stored entities/locations");
 			}
 		}
 		
 		if (configuration.getBoolean(Configuration.VERBOSE) && showDetails) {
-			System.out.println(messagePrefix + "\t(reference data entities size : " + entitiesList.size() + ", greatest Creative Work id : " + creativeWorksCount + ", dbpedia locations : " + DataManager.locationsIdsList.size() + ", geonames locations : " + DataManager.geonamesIdsList.size() + ")");
+			System.out.println(messagePrefix + "\t(reference data entities found: " + entitiesList.size() + ", Creative Works: " + creativeWorksCount + ", dbpedia locations: " + DataManager.locationsIdsList.size() + ", geonames locations: " + DataManager.geonamesIdsList.size() + ")");
 		}
 	}
 	
@@ -315,7 +360,7 @@ public class TestDriver {
 		}
 		
 		if (configuration.getBoolean(Configuration.VERBOSE) && showDetails) {
-			System.out.println(messagePrefix + "\t(reference data entities size : " + entitiesList.size() + ", greatest Creative Work id : " + creativeWorksCount + ", dbpedia locations : " + DataManager.locationsIdsList.size() + ", geonames locations : " + DataManager.geonamesIdsList.size() + ")");
+			System.out.println(messagePrefix + "\t(Creative Works: " + creativeWorksCount + ", Entities: " + entitiesList.size() + ", Locations (DBpedia) : " + DataManager.locationsIdsList.size() + ", Locations (Geonames): " + DataManager.geonamesIdsList.size() + ")");
 		}
 	}
 	
@@ -331,24 +376,35 @@ public class TestDriver {
 			int size=0;
 			long startTime = System.currentTimeMillis();
 			for( File file : files ) {
-				size++;
-				if( file.getName().endsWith(".nq")) {
-					System.out.print("\tloading " + file.getName());
-					InputStream input = new FileInputStream(file);
-					
-					RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_SESAME_NQUADS, input);
-					System.out.println();
+				size++;				
+				
+				if (file.getName().endsWith(".info") || file.getName().endsWith(".txt")) {
+					continue;
 				}
-				if( file.getName().endsWith(".ttl")) {
-					System.out.print("\tloading " + file.getName());
-					InputStream input = new FileInputStream(file);
-					
+				
+				System.out.print("\tloading " + file.getName());
+				long start = System.currentTimeMillis();
+				
+				InputStream input = new FileInputStream(file);
+				
+				if(file.getName().endsWith(".nq")) {										
+					RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_SESAME_NQUADS, input);
+				} else if (file.getName().endsWith(".trig")) {
+					RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_TRIG, input);
+				} else if(file.getName().endsWith(".ttl")) {					
 					RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_TURTLE, input);
+				} else if(file.getName().endsWith(".rdfxml")) {
+					RdfUtils.postStatements(endpoint, RdfUtils.CONTENT_TYPE_RDFXML, input);
+				} else {
 					System.out.println();
-				}		
+					System.out.println("WARNING: unsupported serialization type for file: " + file.getName() + ", supported are: [.nq .trig .ttl .rdfxml]");
+				}
+				
+				System.out.print(String.format(" [%,d ms]", (System.currentTimeMillis() - start)));
+				System.out.println();
 			}
 			long endTime = System.currentTimeMillis();
-			System.out.println("Loaded "+size+" files with Creative Works in "+ (endTime - startTime) + " milliseconds");
+			System.out.println(String.format("Loaded %,d files with Creative Works in %,d ms", size, (endTime - startTime)));
 		}
 	}
 	
@@ -369,7 +425,7 @@ public class TestDriver {
 					ShellUtil.execute(sciptsPath + " " + propertiesFile, file.getName(), true);
 				}
 			} catch (NullPointerException npe) {
-				System.out.println("Warning : Possible wrong configuration for property 'scriptsPath' (test.properties)...");
+				System.out.println("WARNING : Possible wrong configuration for property 'scriptsPath' (test.properties)...");
 //				npe.printStackTrace();
 			} catch (IOException ioe) {			
 				ioe.printStackTrace();
@@ -551,7 +607,7 @@ public class TestDriver {
 			if (DataManager.regularEntitiesList.size() == 0) {
 				populateRefDataEntitiesLists(true, true, false, "");
 				if (DataManager.creativeWorksNextId.get() == 0) {
-					System.err.println("Warning : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
+					System.err.println("WARNING : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
 					System.exit(-1);
 				}
 			}
@@ -592,7 +648,7 @@ public class TestDriver {
 			if (DataManager.regularEntitiesList.size() == 0 || DataManager.correlatedEntitiesList.size() == 0) {
 				populateRefDataEntitiesLists(true, true, false, "");
 				if (DataManager.creativeWorksNextId.get() == 0) {
-					System.err.println("Warning : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
+					System.err.println("WARNING : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
 					System.exit(-1);
 				}
 			}
@@ -667,7 +723,7 @@ public class TestDriver {
 			
 			if (configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS) > 0.0) {
 				if (!benchmarkResultIsValid.get()) {
-					message = String.format("Warning : Benchmark results are not valid! Required query rate has not been reached, or has dropped below threshold (%.1f ops) during the benchmark run.", configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS));
+					message = String.format("WARNING : Benchmark results are not valid! Required query rate has not been reached, or has dropped below threshold (%.1f ops) during the benchmark run.", configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS));
 				} else {
 					message = "Benchmark result is valid!";
 				}
@@ -715,7 +771,7 @@ public class TestDriver {
 			if (DataManager.regularEntitiesList.size() == 0 || DataManager.correlatedEntitiesList.size() == 0) {
 				populateRefDataEntitiesLists(true, true, false, "");
 				if (DataManager.creativeWorksNextId.get() == 0) {
-					System.err.println("Warning : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
+					System.err.println("WARNING : no Creative Works were found stored in the database, initialize it with ontologies and reference and generated data first! Exiting.");
 					System.exit(-1);
 				}
 			}			
@@ -727,7 +783,7 @@ public class TestDriver {
 				System.out.println(message);
 				LOGGER.info(message);				
 			} else {				
-				message = "Warning : The benchmark driver is not configured properly, set a positive value to property 'benchmarkByQueryRuns'. Exiting.";
+				message = "WARNING : The benchmark driver is not configured properly, set a positive value to property 'benchmarkByQueryRuns'. Exiting.";
 				System.out.println(message);
 				LOGGER.info(message);								
 				System.exit(-1);				
@@ -798,7 +854,7 @@ public class TestDriver {
 				}
 			} catch (IOException ioe) {
 				inBenchmarkState.set(false);
-				message = "Warning : Stopping the benchmark : IOExcetion : " + ioe.getMessage();
+				message = "WARNING : Stopping the benchmark : IOExcetion : " + ioe.getMessage();
 				System.out.println(message);
 				throw new IOException(ioe);
 			}
@@ -841,7 +897,7 @@ public class TestDriver {
 			
 			if (configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS) > 0.0) {
 				if (!benchmarkResultIsValid.get()) {
-					message = String.format("Warning : Benchmark results are not valid! Required query rate has not been reached, or has dropped below threshold (%.1f ops) during the benchmark run.", configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS));
+					message = String.format("WARNING : Benchmark results are not valid! Required query rate has not been reached, or has dropped below threshold (%.1f ops) during the benchmark run.", configuration.getDouble(Configuration.MIN_UPDATE_RATE_THRESHOLD_OPS));
 				} else {
 					message = "Benchmark result is valid!";
 				}
