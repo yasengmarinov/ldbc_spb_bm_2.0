@@ -29,27 +29,35 @@ PREFIX curric:<http://www.bbc.co.uk/ontologies/curriculum/>
 PREFIX skos:<http://www.w3.org/2004/02/skos/core#> 
 PREFIX cwork:<http://www.bbc.co.uk/ontologies/creativework/> 
 PREFIX fb:<http://rdf.freebase.com/ns/>
-PREFIX geo:<http://www.w3.org/2003/01/geo/wgs84_pos#>
-PREFIX ldbc:<http://www.ldbc.eu/ontologies/sempub#>
 PREFIX ot:<http://www.ontotext.com/>
+PREFIX ldbcspb:<http://www.ldbcouncil.org/spb#>
+PREFIX : <http://www.ontotext.com/connectors/mongodb#>
+PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 
-#  Query name : query7
+#  Query name : query5
 #  Query Description : 
-#  Retrieve creative works that have been created within a defined date-time range of one hour.
-#  Additional constraint added the type of creative works created in that time range.
+#  Retrieve entities that are most tagged within one hour interval
+#  Restriction on audience type and Creative Work type further limits result.
 
 #  Choke Points : 
-#    - Date range query
-#    - Optimizer should be able to split the FILTER conditions into conjunction of conditions and execute them as soon as possible, 
+#    - Full scan query
+#      Optimizer should not consider the ORDER BY as important clause in cases where all results are counted (COUNT(*))
+#    - A sub-select which aggregates results. Optimizer should recognize it and execute it first
+#    - Join ordering based on cardinality of functional property cwork:dateModified
+#      Optimizer should use an efficient cost evaluation method for choosing the optimal join tree
+#    - Optimizer should be able to split the FILTER conditions into conjunction of conditions and execute the as soon as possible,
 #      which will limit the amount of intermediate results
 
-SELECT ?creativeWork ?dateCreated ?title ?category ?liveCoverage ?audience 
+SELECT DISTINCT ((MAX(?topicPrefLabel)) AS ?topicLabel) ((COUNT(*)) AS ?cnt)
 FROM ot:disable-sameAs
-{
-  ?creativeWork a {{{cwType}}}  .
-  ?creativeWork cwork:dateCreated ?dateCreated .
-  ?creativeWork cwork:title ?title .
-  ?creativeWork cwork:category ?category .
-  ?creativeWork cwork:liveCoverage ?liveCoverage .
-  ?creativeWork cwork:audience ?audience .
-  FILTER(?dateCreated >= "{{{cwStartDateTime}}}"^^<http://www.w3.org/2001/XMLSchema#dateTime> && ?dateCreated < "{{{cwEndDateTime}}}"^^<http://www.w3.org/2001/XMLSchema#dateTime>) .  }
+WHERE {
+    ?search a inst:spb100 ;
+            :aggregation "[	{'$match': {'@graph.@type': '{{{cwTyzpe}}}', '@graph.cwork:audience.@id': '{{{cwAudience}}}', '@graph.cwork:dateModified.@date': {'$gt': ISODate('{{{cwStartDateTime}}}'), '$lt': ISODate('{{{cwEndDateTime}}}') }} }, {'$addFields': {'@graph.cwork:tag' : {'$concatArrays': [{'$cond':{ if: {'$isArray': '$@graph.cwork:about'}, then: '$@graph.cwork:about', else: ['$@graph.cwork:about'] } }, {'$cond':{ if: {'$isArray': '$@graph.cwork:mentions'}, then: '$@graph.cwork:mentions', else: ['$@graph.cwork:mentions'] } } ] }} }]" ;
+            :entity ?entity .
+    graph inst:spb100 {
+        ?creativeWork cwork:tag ?topic .
+    }
+    ?topic ldbcspb:prefLabel ?topicPrefLabel .
+}
+GROUP BY ?topic
+ORDER BY DESC(?cnt)
