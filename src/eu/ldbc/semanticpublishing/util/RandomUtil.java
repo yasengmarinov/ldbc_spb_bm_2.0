@@ -201,8 +201,25 @@ public class RandomUtil {
 		int hour = CALENDAR.get(Calendar.HOUR);
 		int minute = CALENDAR.get(Calendar.MINUTE);
 		int second = CALENDAR.get(Calendar.SECOND);
-		
+
 		return formatDateTime(year, month, day, hour, minute, second);
+	}
+
+	/**
+	 * Produces a xsd:dateTime literal from given parameter Date
+	 *   e.g. "2011-10-21T20:55:58.379+03:00"^^xsd:dateTime
+	 */
+	public String timestamp(Date date) {
+		CALENDAR.setTime(date);
+
+		int year = CALENDAR.get(Calendar.YEAR);
+		int month = CALENDAR.get(Calendar.MONTH) + 1;
+		int day = CALENDAR.get(Calendar.DAY_OF_MONTH);
+		int hour = CALENDAR.get(Calendar.HOUR);
+		int minute = CALENDAR.get(Calendar.MINUTE);
+		int second = CALENDAR.get(Calendar.SECOND);
+
+		return String.format("%1$04d-%2$02d-%3$02dT%4$02d:%5$02d:%6$02dZ", year, month, day, hour,	minute, second);
 	}
 	
 	/**

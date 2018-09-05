@@ -16,6 +16,8 @@ import java.util.Properties;
  * (which is the usual case).
  */
 public class Configuration {
+
+	public static Configuration INSTANCE;
 	
 	public static final String ENDPOINT_URL = "endpointURL";
 	public static final String ENDPOINT_UPDATE_URL = "endpointUpdateURL";
@@ -130,6 +132,8 @@ public class Configuration {
 		properties.setProperty(REPORT_INTERVAL_SECONDS, "1");
 
 		properties.setProperty(MONGO_ENABLED, "false");
+
+		INSTANCE = this;
 	}
 	
 	/**
