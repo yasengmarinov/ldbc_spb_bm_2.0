@@ -52,7 +52,48 @@ SELECT DISTINCT ((MAX(?topicPrefLabel)) AS ?topicLabel) ((COUNT(*)) AS ?cnt)
 FROM ot:disable-sameAs
 WHERE {
     ?search a inst:spb100 ;
-            :aggregation "[	{'$match': {'@graph.@type': '{{{cwType}}}', '@graph.cwork:audience.@id': '{{{cwAudience}}}', '@graph.cwork:dateModified.@date': {'$gt': ISODate('{{{cwStartDateTime}}}'), '$lt': ISODate('{{{cwEndDateTime}}}') }} }, {'$addFields': {'@graph.cwork:tag' : {'$concatArrays': [{'$cond':{ if: {'$isArray': '$@graph.cwork:about'}, then: '$@graph.cwork:about', else: ['$@graph.cwork:about'] } }, {'$cond':{ if: {'$isArray': '$@graph.cwork:mentions'}, then: '$@graph.cwork:mentions', else: ['$@graph.cwork:mentions'] } } ] }} }]" ;
+            :aggregation '''[
+  {
+    "$match": {
+      "@graph.@type": "{{{cwType}}}",
+      "@graph.cwork:audience.@id": "{{{cwAudience}}}",
+      "@graph.cwork:dateModified.@date": {
+        "$gt": ISODate('{{{cwStartDateTime}}}'),
+        "$lt": ISODate('{{{cwEndDateTime}}}')
+      }
+    }
+  },
+  {
+    "$addFields": {
+      "@graph.cwork:tag": {
+        "$concatArrays": [
+          {
+            "$cond": {
+              "if": {
+                "$isArray": "$@graph.cwork:about"
+              },
+              "then": "$@graph.cwork:about",
+              "else": [
+                "$@graph.cwork:about"
+              ]
+            }
+          },
+          {
+            "$cond": {
+              "if": {
+                "$isArray": "$@graph.cwork:mentions"
+              },
+              "then": "$@graph.cwork:mentions",
+              "else": [
+                "$@graph.cwork:mentions"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+]''' ;
             :entity ?entity .
     graph inst:spb100 {
         ?creativeWork cwork:tag ?topic .

@@ -66,8 +66,14 @@ CONSTRUCT {
 FROM ot:disable-sameAs
 WHERE {
     ?search a inst:spb100 ;
-            :aggregation "[	{'$match': {'@graph.@id': 'http://www.bbc.co.uk/things/28890#id'} }]" ;
-                                                                                                  :entity ?creativeWork .
+            :aggregation '''[
+  {
+    "$match": {
+      "@graph.@id": "http://www.bbc.co.uk/things/28890#id"
+    }
+  }
+]''' ;
+                :entity ?creativeWork .
     graph inst:spb100 {
         OPTIONAL { ?creativeWork cwork:dateCreated ?dateCreated . }
         OPTIONAL { ?creativeWork cwork:dateModified ?dateModified . }
@@ -81,7 +87,8 @@ WHERE {
                   a ?type ;
                   cwork:title ?title .
     ?type rdfs:subClassOf cwork:CreativeWork .
+    bind ( if(bound(?about), ?about, "") as ?about_ )
     OPTIONAL {
-        ?about ldbcspb:prefLabel ?aboutPrefLabel .
+        ?about_ ldbcspb:prefLabel ?aboutPrefLabel .
     }
 }
