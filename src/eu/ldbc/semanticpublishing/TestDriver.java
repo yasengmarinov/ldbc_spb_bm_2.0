@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import eu.ldbc.semanticpublishing.refdataset.InsertCreativeWorksInMongoDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -349,6 +350,13 @@ public class TestDriver {
 			}
 			long endTime = System.currentTimeMillis();
 			System.out.println("Loaded "+size+" files with Creative Works in "+ (endTime - startTime) + " milliseconds");
+		}
+	}
+
+	public void loadCreativeWorksInMongoDB(boolean loadInMongoDB) {
+		if (loadInMongoDB) {
+			System.out.println("Loading Creative Works in MongoDB...");
+			new InsertCreativeWorksInMongoDB(configuration);
 		}
 	}
 	
@@ -987,6 +995,7 @@ public class TestDriver {
 		loadDatasets(configuration.getBoolean(Configuration.LOAD_REFERENCE_DATASETS));
 		generateCreativeWorks(configuration.getBoolean(Configuration.GENERATE_CREATIVE_WORKS));
 		loadCreativeWorks(configuration.getBoolean(Configuration.LOAD_CREATIVE_WORKS));
+		loadCreativeWorksInMongoDB(configuration.getBoolean(Configuration.LOAD_CREATIVE_WORKS_IN_MONGODB));
 		executeScripts(configuration.getBoolean(Configuration.LOAD_CREATIVE_WORKS) || configuration.getBoolean(Configuration.VALIDATE_QUERY_RESULTS), "postLoad");
 		generateQuerySubstitutionParameters(configuration.getBoolean(Configuration.GENERATE_QUERY_SUBSTITUTION_PARAMETERS));
 		initializeQuerySubstitutionParameters(configuration.getBoolean(Configuration.WARM_UP) || configuration.getBoolean(Configuration.RUN_BENCHMARK) || configuration.getBoolean(Configuration.RUN_BENCHMARK_ONLINE_REPlICATION_AND_BACKUP));

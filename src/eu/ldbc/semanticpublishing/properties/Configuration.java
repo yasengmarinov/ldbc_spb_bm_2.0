@@ -21,6 +21,10 @@ public class Configuration {
 	
 	public static final String ENDPOINT_URL = "endpointURL";
 	public static final String ENDPOINT_UPDATE_URL = "endpointUpdateURL";
+	public static final String MONGODB_HOST = "mongoDBHost";
+	public static final String MONGODB_PORT = "mongoDBPort";
+	public static final String MONGODB_DATABASE = "mongoDatabase";
+	public static final String MONGODB_COLLECTION = "mongoCollection";
 	public static final String DATASET_SIZE_TRIPLES = "datasetSize";
 	public static final String AGGREGATION_AGENTS_COUNT = "aggregationAgents";
 	public static final String EDITORIAL_AGENTS_COUNT = "editorialAgents";
@@ -41,6 +45,7 @@ public class Configuration {
 	public static final String GENERATE_CREATIVE_WORKS_FORMAT = "generateCreativeWorksFormat";
 	public static final String CREATIVE_WORKS_PATH = "creativeWorksPath";
 	public static final String LOAD_CREATIVE_WORKS = "loadCreativeWorks";
+	public static final String LOAD_CREATIVE_WORKS_IN_MONGODB = "loadCreativeWorksInMongoDB";
 	public static final String WARM_UP = "warmUp";
 	public static final String RUN_BENCHMARK = "runBenchmark";
 	public static final String CLEAR_DATABASE = "clearDatabase";
@@ -80,6 +85,8 @@ public class Configuration {
 	public Configuration() {
 		properties.setProperty(ENDPOINT_URL, "" );
 		properties.setProperty(ENDPOINT_UPDATE_URL, "" );
+		properties.setProperty(MONGODB_HOST, "" );
+		properties.setProperty(MONGODB_PORT, "" );
 		properties.setProperty(DATASET_SIZE_TRIPLES, "" );
 		properties.setProperty(AGGREGATION_AGENTS_COUNT, "16" );
 		properties.setProperty(EDITORIAL_AGENTS_COUNT, "2" );
