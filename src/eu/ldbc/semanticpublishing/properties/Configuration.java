@@ -23,8 +23,9 @@ public class Configuration {
 	public static final String ENDPOINT_UPDATE_URL = "endpointUpdateURL";
 	public static final String MONGODB_HOST = "mongoDBHost";
 	public static final String MONGODB_PORT = "mongoDBPort";
-	public static final String MONGODB_DATABASE = "mongoDatabase";
-	public static final String MONGODB_COLLECTION = "mongoCollection";
+	public static final String MONGODB_DATABASE = "mongoDBDatabase";
+	public static final String MONGODB_COLLECTION = "mongoDBCollection";
+	public static final String MONGODB_BATCH_SIZE = "mongoDBBatchSize";
 	public static final String DATASET_SIZE_TRIPLES = "datasetSize";
 	public static final String AGGREGATION_AGENTS_COUNT = "aggregationAgents";
 	public static final String EDITORIAL_AGENTS_COUNT = "editorialAgents";

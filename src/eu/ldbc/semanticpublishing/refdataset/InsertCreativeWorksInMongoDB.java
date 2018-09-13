@@ -5,9 +5,13 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import eu.ldbc.semanticpublishing.properties.Configuration;
+import org.apache.commons.io.input.BOMInputStream;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.eclipse.rdf4j.common.io.GZipUtil;
+import org.eclipse.rdf4j.common.io.UncloseableInputStream;
+import org.eclipse.rdf4j.common.io.ZipUtil;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.*;
 import org.eclipse.rdf4j.rio.helpers.JSONLDMode;
@@ -17,33 +21,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class InsertCreativeWorksInMongoDB {
 
 	private long timeDocsConversion;
 	private long timeInsertsInMongoDB;
+	private int BATCH_SIZE;
 
-	private static MongoCollection<Document> collection;
+	private MongoCollection<Document> collection;
 
-	private static WriterConfig writerConfig;
-	private static List<String> convertedDocs;
+	private WriterConfig writerConfig;
+	private List<String> convertedDocs;
+	protected DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX");
 
 	private static Logger LOGGER = LoggerFactory.getLogger(InsertCreativeWorksInMongoDB.class.getName());
 
-	public static void main (String[] args) {
+	public static void main(String[] args) {
 		new InsertCreativeWorksInMongoDB(new Configuration());
 	}
 
 	public InsertCreativeWorksInMongoDB(Configuration configuration) {
 
+		BATCH_SIZE = configuration.getInt(Configuration.MONGODB_BATCH_SIZE);
 		File file = new File(configuration.getString(Configuration.CREATIVE_WORKS_PATH));
 		MongoClient mongoClient = null;
 
 		try {
-			convertedDocs = new ArrayList<String>(100000);
+			convertedDocs = new ArrayList<>(BATCH_SIZE);
 			writerConfig = new WriterConfig();
 			writerConfig.set(JSONLDSettings.HIERARCHICAL_VIEW, true);
 			writerConfig.set(JSONLDSettings.JSONLD_MODE, JSONLDMode.COMPACT);
@@ -72,7 +85,7 @@ public class InsertCreativeWorksInMongoDB {
 		}
 	}
 
-	private void fixMongoDates() {
+	private void fixMongoDates() throws ParseException {
 		FindIterable<Document> documents = collection.find();
 		LOGGER.info("Fixing dates in MongoDB...");
 
@@ -80,15 +93,15 @@ public class InsertCreativeWorksInMongoDB {
 
 		for (Document doc : documents) {
 			ObjectId id = doc.getObjectId("_id");
-			List<Map<String,Object>> graph = (List<Map<String, Object>>) doc.get("@graph");
+			List<Map<String, Object>> graph = (List<Map<String, Object>>) doc.get("@graph");
 			Document created = (Document) graph.get(0).get("cwork:dateCreated");
 			Document modified = (Document) graph.get(0).get("cwork:dateModified");
 
-			Bson newCreatedValue = new Document("@graph.0.cwork:dateCreated.@date", convertDate(created.getString("@value")));
+			Bson newCreatedValue = new Document("@graph.0.cwork:dateCreated.@date", dateFormat.parse(created.getString("@value")));
 			Bson updateCreatedDocument = new Document("$set", newCreatedValue);
 			collection.updateOne(new Document("_id", id), updateCreatedDocument);
 
-			Bson newModifiedValue = new Document("@graph.0.cwork:dateModified.@date", convertDate(modified.getString("@value")));
+			Bson newModifiedValue = new Document("@graph.0.cwork:dateModified.@date", dateFormat.parse(modified.getString("@value")));
 			Bson updateModifiedDocument = new Document("$set", newModifiedValue);
 			collection.updateOne(new Document("_id", id), updateModifiedDocument);
 
@@ -98,12 +111,6 @@ public class InsertCreativeWorksInMongoDB {
 		}
 
 		LOGGER.info("Total processed docs: {}", count);
-	}
-
-	private Date convertDate(String dateString) {
-		OffsetDateTime odt = OffsetDateTime.parse( dateString );
-		Instant instant = odt.toInstant();
-		return Date.from(instant);
 	}
 
 	private void generateJSONLDStrings(File file) throws Exception {
@@ -118,23 +125,21 @@ public class InsertCreativeWorksInMongoDB {
 			return;
 		}
 
-		InputStream in = null;
-		try {
-			in = markSupported(new FileInputStream(file));
+		try (InputStream in = markSupported(new FileInputStream(file))) {
 			RDFFormat dataFormat;
 			Optional<RDFFormat> detectedFormat = Rio.getParserFormatForFileName(file.getName());
 
 			if (detectedFormat.isPresent()) {
 				dataFormat = detectedFormat.get();
 			} else {
-				LOGGER.error("Could not find RDF format for file: {}", file.getName());
 				return;
 			}
 
-			getPrettyJsonLdString(in, dataFormat);
-		} finally {
-			if (in != null) {
-				in.close();
+			// If this isn't a compressed stream
+			if (!ZipUtil.isZipStream(in) && !GZipUtil.isGZipStream(in)) {
+				convertAndLoadInMongoIfNeeded(in, dataFormat);
+			} else {
+				loadZipOrGZip(in, dataFormat);
 			}
 		}
 	}
@@ -153,7 +158,7 @@ public class InsertCreativeWorksInMongoDB {
 
 		for (String currDoc : convertedDocs) {
 			batch.add(Document.parse(currDoc));
-			if (batch.size() == 100000) {
+			if (batch.size() == BATCH_SIZE) {
 				collection.insertMany(batch);
 				batch.clear();
 				LOGGER.info("Total docs in MongoDB after load: {}", collection.countDocuments());
@@ -165,28 +170,38 @@ public class InsertCreativeWorksInMongoDB {
 		LOGGER.info("Total docs in MongoDB after load: {}", collection.countDocuments());
 	}
 
-	public void getPrettyJsonLdString(InputStream in, RDFFormat format) {
+	public void convertAndLoadInMongoIfNeeded(Object in, RDFFormat format) {
 		long start = System.currentTimeMillis();
 		List<String> generated = readRdfToString(in, format, RDFFormat.JSONLD, "");
 		for (String currJSONLD : generated) {
 			convertedDocs.add(currJSONLD);
+			// In case we ready documents reach initial capacity of the
+			// ArrayList we insert them into MongoDB to avoid resizing
+			if (convertedDocs.size() == BATCH_SIZE) {
+				LOGGER.info("Starting current load in MongoDB");
+				loadDataInMongo();
+				convertedDocs.clear();
+			}
 		}
 		timeDocsConversion += System.currentTimeMillis() - start;
-		if (convertedDocs.size() >= 98000) {
-			LOGGER.info("Starting current load in MongoDB");
-			loadDataInMongo();
-			convertedDocs.clear();
-		}
 	}
 
 	private Collection<Statement> collectRDFStatements(
-			final InputStream inputStream, final RDFFormat inf,
+			final Object inputStreamOrReader, final RDFFormat inf,
 			final String baseUrl) {
 		try {
 			final RDFParser rdfParser = Rio.createParser(inf);
 			final StatementCollector collector = new StatementCollector();
 			rdfParser.setRDFHandler(collector);
-			rdfParser.parse(inputStream, baseUrl);
+			if (inputStreamOrReader instanceof InputStream) {
+				rdfParser.parse((InputStream) inputStreamOrReader, baseUrl);
+			} else {
+				if (!(inputStreamOrReader instanceof Reader)) {
+					throw new IllegalArgumentException("Must be an InputStream or a Reader, is a: " + inputStreamOrReader.getClass());
+				}
+
+				rdfParser.parse((Reader) inputStreamOrReader, baseUrl);
+			}
 			collector.getNamespaces();
 			return collector.getStatements();
 		} catch (final Exception e) {
@@ -195,9 +210,9 @@ public class InsertCreativeWorksInMongoDB {
 		}
 	}
 
-	private List<String> readRdfToString(InputStream in, RDFFormat inf,
+	private List<String> readRdfToString(Object in, RDFFormat inf,
 										 RDFFormat outf, String baseUrl) {
-		Collection<Statement> myGraph = null;
+		Collection<Statement> myGraph;
 		myGraph = collectRDFStatements(in, inf, baseUrl);
 		return graphToString(myGraph, outf);
 	}
@@ -283,5 +298,60 @@ public class InsertCreativeWorksInMongoDB {
 		}
 
 		return currList;
+	}
+
+	private void loadZipOrGZip(InputStream in, RDFFormat dataFormat) throws IOException {
+		if (!in.markSupported()) {
+			in = new BufferedInputStream(in, 1024);
+		}
+		if (ZipUtil.isZipStream(in)) {
+			loadZip(in, dataFormat);
+		} else if (GZipUtil.isGZipStream(in)) {
+			createReaderAndConvertToJsonLD((new GZIPInputStream(in)), dataFormat);
+		} else {
+			convertAndLoadInMongoIfNeeded(in, dataFormat);
+		}
+	}
+
+	private void loadZip(InputStream in, RDFFormat dataFormat) {
+		ZipInputStream zipIn = new ZipInputStream(in);
+
+		try {
+			for (ZipEntry entry = zipIn.getNextEntry(); entry != null; entry = zipIn.getNextEntry()) {
+				if (!entry.isDirectory()) {
+					try {
+						RDFFormat format = Rio.getParserFormatForFileName(entry.getName()).orElse(dataFormat);
+						UncloseableInputStream wrapper = new UncloseableInputStream(zipIn);
+						loadZipOrGZip(wrapper, format);
+					} finally {
+						zipIn.closeEntry();
+					}
+				}
+			}
+		} catch (IOException e) {
+			LOGGER.error(e.getMessage(), e);
+		} finally {
+			if (zipIn != null) {
+				try {
+					zipIn.close();
+				} catch (IOException e) {
+					LOGGER.error(e.getMessage(), e);
+				}
+			}
+		}
+	}
+
+	private void createReaderAndConvertToJsonLD(InputStream in, RDFFormat dataFormat) {
+		in = markSupported(in);
+
+		InputStreamReader isr;
+		try {
+			isr = new InputStreamReader(new BOMInputStream(in, false), "UTF-8");
+			try (BufferedReader reader = new BufferedReader(isr, 1024)) {
+				convertAndLoadInMongoIfNeeded(reader, dataFormat);
+			}
+		} catch (IOException e) {
+			LOGGER.error(e.getMessage(), e);
+		}
 	}
 }
