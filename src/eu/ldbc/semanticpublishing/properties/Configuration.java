@@ -47,6 +47,7 @@ public class Configuration {
 	public static final String CREATIVE_WORKS_PATH = "creativeWorksPath";
 	public static final String LOAD_CREATIVE_WORKS = "loadCreativeWorks";
 	public static final String LOAD_CREATIVE_WORKS_IN_MONGODB = "loadCreativeWorksInMongoDB";
+	public static final String MONGO_RUN = "mongoRun";
 	public static final String WARM_UP = "warmUp";
 	public static final String RUN_BENCHMARK = "runBenchmark";
 	public static final String CLEAR_DATABASE = "clearDatabase";
@@ -78,7 +79,6 @@ public class Configuration {
 	public static final String CURRENT_RATE_REPORT_PERIOD_SECONDS = "currentRateReportPeriodSeconds";
 	public static final String SAVE_DETAILED_QUERY_LOGS = "saveDetailedQueryLogs";
 	public static final String REPORT_INTERVAL_SECONDS = "reportIntervalSeconds";
-	public static final String MONGO_ENABLED = "mongoEnabled";
 
 	/**
 	 * Initialise and set default values for parameters that make sense.
@@ -139,7 +139,7 @@ public class Configuration {
 		
 		properties.setProperty(REPORT_INTERVAL_SECONDS, "1");
 
-		properties.setProperty(MONGO_ENABLED, "false");
+		properties.setProperty(MONGO_RUN, "false");
 
 		INSTANCE = this;
 	}

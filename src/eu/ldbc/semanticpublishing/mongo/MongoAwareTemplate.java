@@ -22,6 +22,6 @@ public abstract class MongoAwareTemplate extends MustacheTemplate {
 	}
 
 	protected boolean isMongoTemplate() {
-		return Configuration.INSTANCE.getBoolean(Configuration.MONGO_ENABLED);
+		return Configuration.INSTANCE.getBoolean(Configuration.MONGO_RUN);
 	}
 }
