@@ -152,7 +152,6 @@ public class InsertCreativeWorksInMongoDB {
 	}
 
 	private void loadDataInMongo() {
-		LOGGER.info("Total docs in MongoDB before load: {}", collection.countDocuments());
 		long start = System.currentTimeMillis();
 		List<Document> batch = new LinkedList<Document>();
 
@@ -161,13 +160,16 @@ public class InsertCreativeWorksInMongoDB {
 			if (batch.size() == BATCH_SIZE) {
 				collection.insertMany(batch);
 				batch.clear();
-				LOGGER.info("Total docs in MongoDB after load: {}", collection.countDocuments());
+				LOGGER.info("Total docs in MongoDB {}", collection.countDocuments());
 			}
 		}
 
-		collection.insertMany(batch);
+		if (batch.size() != 0) {
+			collection.insertMany(batch);
+			LOGGER.info("Total docs in MongoDB: {}", collection.countDocuments());
+		}
+
 		timeInsertsInMongoDB += System.currentTimeMillis() - start;
-		LOGGER.info("Total docs in MongoDB after load: {}", collection.countDocuments());
 	}
 
 	public void convertAndLoadInMongoIfNeeded(Object in, RDFFormat format) {
@@ -178,7 +180,6 @@ public class InsertCreativeWorksInMongoDB {
 			// In case we ready documents reach initial capacity of the
 			// ArrayList we insert them into MongoDB to avoid resizing
 			if (convertedDocs.size() == BATCH_SIZE) {
-				LOGGER.info("Starting current load in MongoDB");
 				loadDataInMongo();
 				convertedDocs.clear();
 			}
