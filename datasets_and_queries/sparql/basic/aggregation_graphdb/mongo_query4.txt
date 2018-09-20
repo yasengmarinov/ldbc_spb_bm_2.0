@@ -30,24 +30,49 @@ PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
 PREFIX cwork:<http://www.bbc.co.uk/ontologies/creativework/> 
 PREFIX fb:<http://rdf.freebase.com/ns/>
 PREFIX ot:<http://www.ontotext.com/>
+PREFIX : <http://www.ontotext.com/connectors/mongodb#>
+PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 
-#  Query name : query10
+#  Query name : query4
 #  Query Description : 
-#  Retrieve creative works that mention locations in the same province (A.ADM1) as the specified one.
-#  Additional constraint on time interval further limits returned result within one hour.
+#  Describes all blog posts tagged with a topic and order them by creation date. The size of the resultset is limited by a random number between 5 and 20.
 
-SELECT DISTINCT ?creativeWork ?title ?dateModified 
-FROM ot:disable-sameAs
-{
-  {{{geonamesFeatureURI}}} geo-ont:parentFeature ?province .
-  ?province geo-ont:featureCode geo-ont:A.ADM1 .    
-  {
-    ?location geo-ont:parentFeature ?province .
-  } UNION {
-    BIND(?province as ?location) .
-  }
-  ?creativeWork cwork:tag ?location ;
-      cwork:title ?title ;
-      cwork:dateModified ?dateModified .
-     FILTER (?dateModified > "{{{cwStartDateTime}}}"^^<http://www.w3.org/2001/XMLSchema#dateTime> && ?dateModified < "{{{cwEndDateTime}}}"^^<http://www.w3.org/2001/XMLSchema#dateTime>) .
+#  Choke Points : 
+#    - Optimizer could consider the possibility to choose a query plan that would facilitate the ordering (ORDER BY) of result
+
+CONSTRUCT {
+    ?creativeWork ?pred ?value .
+    ?creativeWork rdf:type ?parentType .
+}
+# FROM ot:disable-sameAs
+WHERE {
+    values ?template {
+        '''[
+{"$match": {"@graph.@type": "{{{cwType}}}", "@graph.cwork:primaryFormat.@id": "{{{cwFormat}}}", "@graph.cwork:about.@id": {"$in": ["$arg1"]}
+}},
+{"$sort": {"@graph.cwork:dateCreated": -1}},
+{"$limit": {{{randomLimit}}}}
+]'''
+    }
+    {
+        select (group_concat(?tagsStr;
+                separator = '", "') as ?arg1)
+        where {
+            ?tags owl:sameAs {{{cwAboutUri}}};
+                  bind (replace(str(?tags), "http://sws.geonames.org/", "geonames:") as ?tmp1)
+            bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagsStr)
+        }
+    }
+    bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
+    {
+        ?search a inst:spb100 ;
+                :aggregation ?query ;
+                :entity ?creativeWork.
+        graph inst:spb100 {
+            ?creativeWork ?pred ?value.
+            ?creativeWork a ?type.
+            FILTER (?pred NOT IN (cwork:tag, cwork:about, cwork:mention))
+        }
+    }
+    ?type rdfs:subClassOf ?parentType .
 }

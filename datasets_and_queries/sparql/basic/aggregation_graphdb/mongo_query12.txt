@@ -29,48 +29,53 @@ PREFIX curric:<http://www.bbc.co.uk/ontologies/curriculum/>
 PREFIX skos:<http://www.w3.org/2004/02/skos/core#> 
 PREFIX cwork:<http://www.bbc.co.uk/ontologies/creativework/> 
 PREFIX fb:<http://rdf.freebase.com/ns/>
-PREFIX ot:<http://www.ontotext.com/>
+PREFIX ot:<http://www.ontotext.com/> 
 PREFIX ldbcspb:<http://www.ldbcouncil.org/spb#>
 PREFIX : <http://www.ontotext.com/connectors/mongodb#>
 PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 
-#  Query name : query5
+#  Query Name : query12
 #  Query Description : 
-#  Retrieve entities that are most tagged within one hour interval
-#  Restriction on audience type and Creative Work type further limits result.
+#  Retrieve the descriptions of the latest creative works tagged with a specific location. Consider that the description of each specific 
+#  Creative Work is stored in dedicated named graph. The result should include only the explicit statements about the creative work, without owl:sameAs 
+#  equivalence and without statements inferred otherwise .
 
-#  Choke Points : 
-#    - Full scan query
-#      Optimizer should not consider the ORDER BY as important clause in cases where all results are counted (COUNT(*))
-#    - A sub-select which aggregates results. Optimizer should recognize it and execute it first
-#    - Join ordering based on cardinality of functional property cwork:dateModified
-#      Optimizer should use an efficient cost evaluation method for choosing the optimal join tree
-#    - Optimizer should be able to split the FILTER conditions into conjunction of conditions and execute the as soon as possible,
-#      which will limit the amount of intermediate results
-
-SELECT DISTINCT ((MAX(?topicPrefLabel)) AS ?topicLabel) ((COUNT(*)) AS ?cnt)
-FROM ot:disable-sameAs
+SELECT ?cworkGraph ?s ?p ?o
+#FROM ot:disable-sameAs
 WHERE {
-    ?search a inst:spb100 ;
-            :aggregation '''[
-  {
-    "$match": {
-      "@graph.@type": "{{{cwType}}}",
-      "@graph.cwork:audience.@id": "{{{cwAudience}}}",
-      "@graph.cwork:dateModified.@date": {
-        "$gt": ISODate('{{{cwStartDateTime}}}'),
-        "$lt": ISODate('{{{cwEndDateTime}}}')
-      }
+    {
+        {
+            select (group_concat(?tagStr;
+                    separator = '", "') as ?arg1)
+            {
+                ?tag owl:sameAs {{{creativeWorkTag}}} .
+                bind (replace(str(?tag), "http://sws.geonames.org/", "geonames:") as ?tmp1)
+                bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagStr)
+            }
+        }
+        values ?template {
+            '''[
+{
+"$match": {
+"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}]
+}},
+{"$sort": {"@graph.cwork:dateModified.@date": -1}},
+{"$limit": 10},
+{'$addFields': {'@graph.cwork:graph.@id' :  '$@id'}}
+]'''
+        }
+        bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
+        {
+            ?search a inst:spb100 ;
+                    :aggregation ?query ;
+                    :entity ?entity .
+            graph inst:spb100 {
+                ?creativeWork cwork:graph ?cworkGraph .
+            }
+        }
     }
-  }
-]''' ;
-            :entity ?entity .
-    graph inst:spb100 {
-        { ?creativeWork cwork:about ?topic . }
-        UNION
-        { ?creativeWork cwork:mentions ?topic . }
+    GRAPH ?cworkGraph {
+        ?s ?p ?o .
     }
-    ?topic ldbcspb:prefLabel ?topicPrefLabel .
 }
-GROUP BY ?topic
-ORDER BY DESC(?cnt)
+ORDER BY ?cworkGraph ?s ?p ?o

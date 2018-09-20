@@ -1,0 +1,98 @@
+PREFIX bbcevent:<http://www.bbc.co.uk/ontologies/event/> 
+PREFIX geo-pos:<http://www.w3.org/2003/01/geo/wgs84_pos#> 
+PREFIX bbc:<http://www.bbc.co.uk/ontologies/bbc/> 
+PREFIX time:<http://www.w3.org/2006/time#> 
+PREFIX event:<http://purl.org/NET/c4dm/event.owl#> 
+PREFIX music-ont:<http://purl.org/ontology/mo/> 
+PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+PREFIX foaf:<http://xmlns.com/foaf/0.1/> 
+PREFIX provenance:<http://www.bbc.co.uk/ontologies/provenance/> 
+PREFIX owl:<http://www.w3.org/2002/07/owl#> 
+PREFIX cms:<http://www.bbc.co.uk/ontologies/cms/> 
+PREFIX news:<http://www.bbc.co.uk/ontologies/news/> 
+PREFIX cnews:<http://www.bbc.co.uk/ontologies/news/cnews/> 
+PREFIX cconcepts:<http://www.bbc.co.uk/ontologies/coreconcepts/> 
+PREFIX dbp-prop:<http://dbpedia.org/property/> 
+PREFIX geonames:<http://sws.geonames.org/> 
+PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#> 
+PREFIX domain:<http://www.bbc.co.uk/ontologies/domain/> 
+PREFIX dbpedia:<http://dbpedia.org/resource/> 
+PREFIX geo-ont:<http://www.geonames.org/ontology#> 
+PREFIX bbc-pont:<http://purl.org/ontology/po/> 
+PREFIX tagging:<http://www.bbc.co.uk/ontologies/tagging/> 
+PREFIX sport:<http://www.bbc.co.uk/ontologies/sport/> 
+PREFIX skosCore:<http://www.w3.org/2004/02/skos/core#> 
+PREFIX dbp-ont:<http://dbpedia.org/ontology/> 
+PREFIX xsd:<http://www.w3.org/2001/XMLSchema#> 
+PREFIX core:<http://www.bbc.co.uk/ontologies/coreconcepts/> 
+PREFIX curric:<http://www.bbc.co.uk/ontologies/curriculum/> 
+PREFIX skos:<http://www.w3.org/2004/02/skos/core#> 
+PREFIX cwork:<http://www.bbc.co.uk/ontologies/creativework/> 
+PREFIX fb:<http://rdf.freebase.com/ns/>
+PREFIX geo:<http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX ldbc:<http://www.ldbc.eu/ontologies/sempub#>
+PREFIX ontogeo: <http://www.ontotext.com/owlim/geo#>
+PREFIX ot:<http://www.ontotext.com/>
+PREFIX : <http://www.ontotext.com/connectors/mongodb#>
+PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
+
+#  Query name : query6
+#  Query Description :
+#  Retrieve creative works within a certain range defined by geo-coordinates 
+#  Retrieves a list of all creative works that are mentioning entities within a geo-spatial range.
+
+#  Choke Points : 
+#    - A geo-spatial query
+#      Allows each RDF engine could use its custom geo-spatial implementations.
+#    - Optimizer should be able to split the FILTER conditions into conjunction of conditions and execute them as soon as possible, 
+#      which will limit the amount of intermediate results
+
+#  Requires initialization of Geo-spatial index first
+#  PREFIX ontogeo: <http://www.ontotext.com/owlim/geo#>
+#  INSERT DATA { _:b1 ontogeo:createIndex _:b2. }
+
+SELECT DISTINCT ?entity ?locationName ?lat ?long ?dateModified
+{
+    {
+        select (group_concat(?tmp2;
+                separator = '", "') as ?arg1) (group_concat(?geonamesId;
+                separator = '", "') as ?all) {
+            {
+                SELECT (?referenceLat - ?deviation as ?minlat) (?referenceLong - ?deviation as ?minlong) (?referenceLat + ?deviation as ?maxlat) (?referenceLong + ?deviation as ?maxlong)
+                {
+                    BIND({{{refLatitude}}} AS ?referenceLat) .
+                    BIND({{{refLongtitude}}} AS ?referenceLong) .
+                    BIND({{{refDeviation}}} AS ?deviation) .
+                }
+            }
+            ?gn ontogeo:within(?minlat ?minlong ?maxlat ?maxlong) .
+            {
+                ?gn owl:sameAs ?geonamesId .
+            }
+            union
+            {
+                bind (?gn as ?geonamesId)
+            }
+            bind (replace(str(?geonamesId), "http://sws.geonames.org/", "geonames:") as ?tmp1)
+            bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tmp2)
+        }
+    }
+    values ?template {
+        '{"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}'
+    }
+    bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
+    {
+        ?search a inst:spb100 ;
+                :query ?query ;
+                :entity ?entity .
+        graph inst:spb100 {
+            ?entity cwork:dateModified ?dateModified .
+            ?entity cwork:mentions ?geonamesId .
+            filter(contains(str(?all), str(?geonamesId)))
+        }
+        ?geonamesId geo:lat ?lat .
+        ?geonamesId geo:long ?long .
+        ?geonamesId a geo-ont:Feature .
+        ?geonamesId geo-ont:name ?locationName .
+    }
+}

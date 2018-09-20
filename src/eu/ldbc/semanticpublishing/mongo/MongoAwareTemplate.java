@@ -7,9 +7,9 @@ import java.util.HashMap;
 
 public abstract class MongoAwareTemplate extends MustacheTemplate {
 
-	private static final String MONGO_PREFIX = "mongo_";
+	protected static final String MONGO_PREFIX = "mongo_";
 
-	private final String templateDefaultName;
+	protected final String templateDefaultName;
 
 	public MongoAwareTemplate(HashMap<String, String> queryTemplates, String[] substitutionParameters, String templateDefaultName) {
 		super(queryTemplates, substitutionParameters);
@@ -18,6 +18,10 @@ public abstract class MongoAwareTemplate extends MustacheTemplate {
 
 	@Override
 	public String getTemplateFileName() {
-		return (Configuration.INSTANCE.getBoolean(Configuration.MONGO_ENABLED) ? MONGO_PREFIX : "") + templateDefaultName;
+		return (isMongoTemplate() ? MONGO_PREFIX : "") + templateDefaultName;
+	}
+
+	protected boolean isMongoTemplate() {
+		return Configuration.INSTANCE.getBoolean(Configuration.MONGO_ENABLED);
 	}
 }
