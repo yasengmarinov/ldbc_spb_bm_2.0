@@ -73,20 +73,24 @@ WHERE {
     }
   }
 ]''' ;
-                :entity ?creativeWork .
+            :entity ?creativeWork .
     graph inst:spb100 {
-        OPTIONAL { ?creativeWork cwork:dateCreated ?dateCreated . }
-        OPTIONAL { ?creativeWork cwork:dateModified ?dateModified . }
+        ?creativeWork a ?type ;
+                      cwork:title ?title .
+        OPTIONAL {
+            ?creativeWork cwork:dateCreated ?dateCreated .
+        }
+        OPTIONAL {
+            ?creativeWork cwork:dateModified ?dateModified .
+        }
         OPTIONAL {
             ?creativeWork bbc:primaryContentOf ?pco .
             ?pco bbc:webDocumentType ?webDocType .
         }.
-        OPTIONAL { ?creativeWork cwork:about ?about . }
+        OPTIONAL {
+            ?creativeWork cwork:about ?about .
+        }
     }
-    ?creativeWork a cwork:CreativeWork ;
-                  a ?type ;
-                  cwork:title ?title .
-    ?type rdfs:subClassOf cwork:CreativeWork .
     bind ( if(bound(?about), ?about, "") as ?about_ )
     OPTIONAL {
         ?about_ ldbcspb:prefLabel ?aboutPrefLabel .

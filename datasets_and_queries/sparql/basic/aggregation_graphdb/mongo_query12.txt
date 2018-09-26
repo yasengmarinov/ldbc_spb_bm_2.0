@@ -71,11 +71,9 @@ WHERE {
                     :entity ?entity .
             graph inst:spb100 {
                 ?creativeWork cwork:graph ?cworkGraph .
+                ?s ?p ?o .
             }
         }
-    }
-    GRAPH ?cworkGraph {
-        ?s ?p ?o .
     }
 }
 ORDER BY ?cworkGraph ?s ?p ?o

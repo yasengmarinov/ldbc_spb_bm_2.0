@@ -58,95 +58,102 @@ PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 #         }  
 
 SELECT ?other_creativeWork ?dt ((?cnt_2 * 2 + ?cnt_1_5 * 15e-1 + ?cnt_1 + ?cnt_0_5 * 5e-1) AS ?score) 
-# FROM ot:disable-sameAs
+#FROM ot:disable-sameAs
 WHERE {
     {
-        select (COUNT(*) AS ?cnt_2)  where {
-            ?search a inst:spb100 ;
-                    :query '{"@graph.@id": "{{{cwUri}}}"}' ;
-                    :entity ?entity.
-            graph inst:spb100 {
-                ?creativeWork cwork:about ?oa .
-            }
-            ?other_cw cwork:about ?oa .
-        }
-    }.
-    {
-        select (COUNT(*) AS ?cnt_1_5)  where {
-            ?search a inst:spb100 ;
-                    :query '{"@graph.@id": "{{{cwUri}}}"}' ;
-                    :entity ?entity.
-            graph inst:spb100 {
-                ?creativeWork cwork:mentions ?oa .
-            }
-            ?other_cw cwork:about ?oa .
-        }
-    } .
-    {
-        select (COUNT(*) AS ?cnt_1)  where {
-            ?search a inst:spb100 ;
-                    :query '{"@graph.@id": "{{{cwUri}}}"}' ;
-                    :entity ?entity.
-            graph inst:spb100 {
-                ?creativeWork cwork:about ?oa .
-            }
-            ?other_cw cwork:mentions ?oa .
-        }
-    } .
-    {
-        select (COUNT(*) AS ?cnt_0_5)  where {
-            ?search a inst:spb100 ;
-                    :query '{"@graph.@id": "{{{cwUri}}}"}' ;
-                    :entity ?entity.
-            graph inst:spb100 {
-                ?creativeWork cwork:mentions ?om .
-            }
-            ?other_cw cwork:mentions ?om .
-        }
-    } .
-    {
-        select ?other_creativeWork ?dt
-        {
+        select (group_concat(?aboutStr;
+                separator = '", "') as ?argAbout) (group_concat(?mentionsStr;
+                separator = '", "') as ?argMentions) (concat(str(?argMentions), '", "', str(?argAbout)) as ?argTag)
+        where {
             {
-                select (group_concat(?tagsStr;
-                        separator = '", "') as ?arg1)
-                where {
-                    {
-                        ?search a inst:spb100 ;
-                                :aggregation '''[
+                ?search a inst:spb100 ;
+                        :aggregation '''[
 {"$match": {"@graph.@id": "{{{cwUri}}}"}},
 ]''' ;
-                                :entity ?entity.
-                        graph inst:spb100 {
-                            {
-                                ?creativeWorkcreativeWork cwork:about ?tag .
-                            }
-                            UNION
-                            {
-                                ?creativeWork cwork:mentions ?tag .
-                            }
-                        }
-                        bind (replace(str(?tag), "http://sws.geonames.org/", "geonames:") as ?tmp1)
-                        bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagsStr)
-                    }
+     :entity ?entity.
+                graph inst:spb100 {
+                    ?creativeWork cwork:about ?about .
+                    ?creativeWork cwork:mentions ?mentions .
                 }
+                bind (replace(str(?about), "http://sws.geonames.org/", "geonames:") as ?tmp2)
+                bind (replace(str(?tmp2), "http://dbpedia.org/resource/", "dbpedia:") as ?aboutStr)
+                bind (replace(str(?mentions), "http://sws.geonames.org/", "geonames:") as ?tmp3)
+                bind (replace(str(?tmp3), "http://dbpedia.org/resource/", "dbpedia:") as ?mentionsStr)
             }
-            values ?template {
+        }
+    } .
+    {
+        bind (
+            '''
+[{"$facet":{"default":[{"$limit":1},{"$project":{"value":"0"}}],"actual":[{"$match":{"@graph.cwork:$matchTo.@id":{"$in":["$matchFrom"]}}},{"$project":{"collapsed":{"$reduce":{"input":"$@graph.cwork:$matchTo.@id","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$group":{"_id":"null","abouts":{"$push":"$collapsed"}}},{"$project":{"collapsed":{"$reduce":{"input":"$abouts","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$project":{"filtered":{"$filter":{"input":"$collapsed","cond":{"$in":["$$this",["$matchFrom"]]}}}}},{"$project":{"value":{"$size":"$filtered"}}}]}},{"$project":{"@id":"_:b","aggregate:count.@value":{"$max":[0,{"$max":"$actual.value"}]}}}]'''
+            as ?template
+        )
+        {
+            bind (replace(str(?template), "\\$matchFrom", ?argAbout) as ?queryTmp0 )
+            bind (replace(str(?queryTmp0), "\\$matchTo", "about") as ?query0 )
+                ?search0 a inst:spb100 ;
+                         :aggregation ?query0 ;
+                         :graph inst:graph0 ;
+                         :entity ?entity0.
+                graph inst:graph0 {
+                    ?s0 <aggregate:count> ?cnt_2_ .
+                }
+        }
+        {
+            bind (replace(str(?template), "\\$matchFrom", ?argMentions) as ?queryTmp1 )
+            bind (replace(str(?queryTmp1), "\\$matchTo", "about") as ?query1 )
+                ?search1 a inst:spb100 ;
+                         :aggregation ?query1 ;
+                         :graph inst:graph1 ;
+                         :entity ?entity1.
+                graph inst:graph1 {
+                    ?s1 <aggregate:count> ?cnt_1_5_ .
+                }
+        }
+        {
+            bind (replace(str(?template), "\\$matchFrom", ?argAbout) as ?queryTmp2 )
+            bind (replace(str(?queryTmp2), "\\$matchTo", "mentions") as ?query2 )
+                ?search2 a inst:spb100 ;
+                         :aggregation ?query2 ;
+                         :graph inst:graph2 ;
+                         :entity ?entity2.
+                graph inst:graph2 {
+                    ?s2 <aggregate:count> ?cnt_1_ .
+                }
+        }
+        {
+            bind (replace(str(?template), "\\$matchFrom", ?argMentions) as ?queryTmp3 )
+            bind (replace(str(?queryTmp3), "\\$matchTo", "mentions") as ?query3 )
+                ?search3 a inst:spb100 ;
+                         :aggregation ?query3 ;
+                         :graph inst:graph3 ;
+                         :entity ?entity3.
+                graph inst:graph3 {
+                    ?s3 <aggregate:count> ?cnt_0_5_ .
+                }
+        }
+        {
+            values ?template2 {
                 '''[
-{"$match": {"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}]}},
+{"$match": {"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}]}},
 {"$sort": {"@graph.cwork:dateModified.@date": -1}},
 {"$limit": 10}
 ]'''
             }
-            bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
+            bind (replace(str(?template2), "\\$arg1", ?argTag) as ?query )
             {
                 ?search a inst:spb100 ;
                         :aggregation ?query ;
+                        :graph inst:graph4 ;
                         :entity ?entity.
-                graph inst:spb100 {
+                graph inst:graph4 {
                     ?other_creativeWork cwork:dateModified ?dt .
                 }
             }
-        }
+        }.
+        bind ( if(bound(?cnt_1_), ?cnt_1_, 0) as ?cnt_1 )
+        bind ( if(bound(?cnt_2_), ?cnt_2_, 0) as ?cnt_2 )
+        bind ( if(bound(?cnt_1_5_), ?cnt_1_5_, 0) as ?cnt_1_5 )
+        bind ( if(bound(?cnt_0_5_), ?cnt_0_5_, 0) as ?cnt_0_5 )
     }
 }
