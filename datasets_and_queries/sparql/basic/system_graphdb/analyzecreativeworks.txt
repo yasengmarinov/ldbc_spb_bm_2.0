@@ -41,7 +41,12 @@ FROM ot:disable-sameAs
 {
     {
         ?search a inst:spb100 ;
-                :query '{}' ;
+                :aggregation  '''[
+                             {
+                             "$match": {}},
+                             {"$sort": {"@graph.@id": -1}},
+                             {"$limit": 1},
+                             ]''' ;
                 :entity ?cwUri .
     }
     UNION

@@ -69,7 +69,7 @@ WHERE {
             :aggregation '''[
   {
     "$match": {
-      "@graph.@id": "http://www.bbc.co.uk/things/28890#id"
+      "@graph.@id": "{{{cwUri}}}"
     }
   }
 ]''' ;

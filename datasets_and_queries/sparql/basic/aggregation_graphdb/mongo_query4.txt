@@ -50,7 +50,7 @@ WHERE {
         '''[
 {"$match": {"@graph.@type": "{{{cwType}}}", "@graph.cwork:primaryFormat.@id": "{{{cwFormat}}}", "@graph.cwork:about.@id": {"$in": ["$arg1"]}
 }},
-{"$sort": {"@graph.cwork:dateCreated": -1}},
+{"$sort": {"@graph.cwork:dateCreated.@date": -1}},
 {"$limit": {{{randomLimit}}}}
 ]'''
     }

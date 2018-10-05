@@ -96,7 +96,7 @@ WHERE {
                          :graph inst:graph0 ;
                          :entity ?entity0.
                 graph inst:graph0 {
-                    ?s0 <aggregate:count> ?cnt_2_ .
+                    ?s0 <aggregate:count> ?cnt_2 .
                 }
         }
         {
@@ -107,7 +107,7 @@ WHERE {
                          :graph inst:graph1 ;
                          :entity ?entity1.
                 graph inst:graph1 {
-                    ?s1 <aggregate:count> ?cnt_1_5_ .
+                    ?s1 <aggregate:count> ?cnt_1_5 .
                 }
         }
         {
@@ -118,7 +118,7 @@ WHERE {
                          :graph inst:graph2 ;
                          :entity ?entity2.
                 graph inst:graph2 {
-                    ?s2 <aggregate:count> ?cnt_1_ .
+                    ?s2 <aggregate:count> ?cnt_1 .
                 }
         }
         {
@@ -129,7 +129,7 @@ WHERE {
                          :graph inst:graph3 ;
                          :entity ?entity3.
                 graph inst:graph3 {
-                    ?s3 <aggregate:count> ?cnt_0_5_ .
+                    ?s3 <aggregate:count> ?cnt_0_5 .
                 }
         }
         {
@@ -151,9 +151,5 @@ WHERE {
                 }
             }
         }.
-        bind ( if(bound(?cnt_1_), ?cnt_1_, 0) as ?cnt_1 )
-        bind ( if(bound(?cnt_2_), ?cnt_2_, 0) as ?cnt_2 )
-        bind ( if(bound(?cnt_1_5_), ?cnt_1_5_, 0) as ?cnt_1_5 )
-        bind ( if(bound(?cnt_0_5_), ?cnt_0_5_, 0) as ?cnt_0_5 )
     }
 }
