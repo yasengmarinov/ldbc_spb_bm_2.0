@@ -53,7 +53,7 @@ FROM ot:disable-sameAs
 WHERE {
     {
         ?search a inst:spb100 ;
-                :aggregation '''[
+                :aggregate '''[
   {
     "$match": {
       "$and": [

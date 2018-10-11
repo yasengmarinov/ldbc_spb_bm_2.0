@@ -67,7 +67,7 @@ WHERE {
         where {
             {
                 ?search a inst:spb100 ;
-                        :aggregation '''[
+                        :aggregate '''[
 {"$match": {"@graph.@id": "{{{cwUri}}}"}},
 ]''' ;
      :entity ?entity.
@@ -92,7 +92,7 @@ WHERE {
             bind (replace(str(?template), "\\$matchFrom", ?argAbout) as ?queryTmp0 )
             bind (replace(str(?queryTmp0), "\\$matchTo", "about") as ?query0 )
                 ?search0 a inst:spb100 ;
-                         :aggregation ?query0 ;
+                         :aggregate ?query0 ;
                          :graph inst:graph0 ;
                          :entity ?entity0.
                 graph inst:graph0 {
@@ -103,7 +103,7 @@ WHERE {
             bind (replace(str(?template), "\\$matchFrom", ?argMentions) as ?queryTmp1 )
             bind (replace(str(?queryTmp1), "\\$matchTo", "about") as ?query1 )
                 ?search1 a inst:spb100 ;
-                         :aggregation ?query1 ;
+                         :aggregate ?query1 ;
                          :graph inst:graph1 ;
                          :entity ?entity1.
                 graph inst:graph1 {
@@ -114,7 +114,7 @@ WHERE {
             bind (replace(str(?template), "\\$matchFrom", ?argAbout) as ?queryTmp2 )
             bind (replace(str(?queryTmp2), "\\$matchTo", "mentions") as ?query2 )
                 ?search2 a inst:spb100 ;
-                         :aggregation ?query2 ;
+                         :aggregate ?query2 ;
                          :graph inst:graph2 ;
                          :entity ?entity2.
                 graph inst:graph2 {
@@ -125,7 +125,7 @@ WHERE {
             bind (replace(str(?template), "\\$matchFrom", ?argMentions) as ?queryTmp3 )
             bind (replace(str(?queryTmp3), "\\$matchTo", "mentions") as ?query3 )
                 ?search3 a inst:spb100 ;
-                         :aggregation ?query3 ;
+                         :aggregate ?query3 ;
                          :graph inst:graph3 ;
                          :entity ?entity3.
                 graph inst:graph3 {
@@ -143,7 +143,7 @@ WHERE {
             bind (replace(str(?template2), "\\$arg1", ?argTag) as ?query )
             {
                 ?search a inst:spb100 ;
-                        :aggregation ?query ;
+                        :aggregate ?query ;
                         :graph inst:graph4 ;
                         :entity ?entity.
                 graph inst:graph4 {

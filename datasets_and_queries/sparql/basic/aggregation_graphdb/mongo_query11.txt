@@ -74,7 +74,7 @@ SELECT DISTINCT ?creativeWork ?title ?description ?dateModified ?primaryContent
     bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
     {
         ?search a inst:spb100 ;
-                :aggregation ?query ;
+                :aggregate ?query ;
                 :entity ?entity .
         graph inst:spb100 {
             ?creativeWork         cwork:title ?title ;

@@ -47,14 +47,15 @@ PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 
 select ?creativeWork ?dateCreated ?title ?category ?liveCoverage ?audience {
     ?search a inst:spb100 ;
-            :query '''{
+            :find '''{
   "@graph.@type": "{{{cwType}}}",
   "@graph.cwork:dateCreated.@date": {
     "$gt": ISODate('{{{cwStartDateTime}}}'),
     "$lt": ISODate('{{{cwEndDateTime}}}')
   }
 }''' ;
-            :projection '''{
+            :hint '{"@graph.@type": 1}' ;
+            :project '''{
   "@graph.@id": 1,
   "@context": 1,
   "@graph.cwork:dateCreated": 1,

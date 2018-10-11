@@ -83,7 +83,7 @@ SELECT DISTINCT ?entity ?locationName ?lat ?long ?dateModified
     bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
     {
         ?search a inst:spb100 ;
-                :query ?query ;
+                :find ?query ;
                 :entity ?entity .
         graph inst:spb100 {
             ?entity cwork:dateModified ?dateModified .

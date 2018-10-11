@@ -66,7 +66,7 @@ WHERE {
     bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
     {
         ?search a inst:spb100 ;
-                :aggregation ?query ;
+                :aggregate ?query ;
                 :entity ?creativeWork.
         graph inst:spb100 {
             ?creativeWork ?pred ?value.

@@ -52,7 +52,7 @@ SELECT DISTINCT ((MAX(?topicPrefLabel)) AS ?topicLabel) ((COUNT(*)) AS ?cnt)
 FROM ot:disable-sameAs
 WHERE {
     ?search a inst:spb100 ;
-            :aggregation '''[
+            :aggregate '''[
   {
     "$match": {
       "@graph.@type": "{{{cwType}}}",
@@ -64,6 +64,7 @@ WHERE {
     }
   }
 ]''' ;
+            :hint '{"@graph.@type": 1}' ;
             :entity ?entity .
     graph inst:spb100 {
         { ?creativeWork cwork:about ?topic . }
