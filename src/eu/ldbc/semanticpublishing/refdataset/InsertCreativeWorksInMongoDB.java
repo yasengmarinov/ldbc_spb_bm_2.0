@@ -244,7 +244,6 @@ public class InsertCreativeWorksInMongoDB {
 					writer = Rio.createWriter(outf, out);
 					writer.setWriterConfig(writerConfig);
 					writer.handleNamespace("bbcevent", "http://www.bbc.co.uk/ontologies/event/");
-					writer.handleNamespace("bbcwebDocumentType", "http://www.bbc.co.uk/ontologies/bbc/webDocumentType");
 					writer.handleNamespace("geo-pos", "http://www.w3.org/2003/01/geo/wgs84_pos#");
 					writer.handleNamespace("bbc", "http://www.bbc.co.uk/ontologies/bbc/");
 					writer.handleNamespace("time", "http://www.w3.org/2006/time#");

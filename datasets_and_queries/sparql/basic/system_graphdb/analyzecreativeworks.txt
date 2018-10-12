@@ -41,7 +41,7 @@ FROM ot:disable-sameAs
 {
     {
         ?search a inst:spb100 ;
-                :aggregation  '''[
+                :aggregate  '''[
                              {
                              "$match": {}},
                              {"$sort": {"@graph.@id": -1}},
