@@ -39,7 +39,7 @@ public class Utils {
 		return database.getCollection(configuration.getString(Configuration.MONGODB_COLLECTION)).withWriteConcern(WriteConcern.JOURNALED);
 	}
 
-	public static Document modelToJsonLd(Model model) {
+	public static Document modelToDocument(Model model) {
 		StringWriter out = new StringWriter();
 
 		RDFWriter writer = new JSONLDWriter(out);

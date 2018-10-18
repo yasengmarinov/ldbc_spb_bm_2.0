@@ -3,7 +3,8 @@ package eu.ldbc.semanticpublishing.refdataset;
 import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.IndexModel;
+import com.mongodb.client.model.Indexes;
 import eu.ldbc.semanticpublishing.mongo.Utils;
 import eu.ldbc.semanticpublishing.properties.Configuration;
 import org.apache.commons.io.input.BOMInputStream;
@@ -14,6 +15,9 @@ import org.eclipse.rdf4j.common.io.GZipUtil;
 import org.eclipse.rdf4j.common.io.UncloseableInputStream;
 import org.eclipse.rdf4j.common.io.ZipUtil;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.repository.Repository;
+import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.eclipse.rdf4j.repository.http.HTTPRepository;
 import org.eclipse.rdf4j.rio.*;
 import org.eclipse.rdf4j.rio.helpers.JSONLDMode;
 import org.eclipse.rdf4j.rio.helpers.JSONLDSettings;
@@ -25,8 +29,8 @@ import java.io.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -45,6 +49,13 @@ public class InsertCreativeWorksInMongoDB {
 	protected DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX");
 
 	private static Logger LOGGER = LoggerFactory.getLogger(InsertCreativeWorksInMongoDB.class.getName());
+	private static String INDEX_QUERY = "PREFIX : <http://www.ontotext.com/connectors/mongodb#>\n" +
+			"PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>\n" +
+			"insert data {\n" +
+			"    inst:spb100 :service \"mongodb://%s:%s\" ;\n" +
+			"        :database \"%s\" ;\n" +
+			"        :collection \"%s\" .\n" +
+			"}";
 
 	public InsertCreativeWorksInMongoDB(Configuration configuration) {
 
@@ -67,6 +78,10 @@ public class InsertCreativeWorksInMongoDB {
 
 			LOGGER.info("Files converted to JSON-LD in " + timeDocsConversion + " ms!");
 			LOGGER.info("Documents inserted in MongoDB for " + timeInsertsInMongoDB + " ms!");
+
+			createIndexes();
+			createGDBIndex(configuration);
+
 			LOGGER.info("Whole process took " + (System.currentTimeMillis() - startProcess) + " ms!");
 
 			// Dates in documents should taken and converted from strings to Date objects
@@ -75,8 +90,41 @@ public class InsertCreativeWorksInMongoDB {
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage(), e);
 		} finally {
-			mongoClient.close();
+			if (mongoClient != null) {
+				mongoClient.close();
+			}
 		}
+	}
+
+	private void createIndexes() {
+		LOGGER.info("Begin indexing of mongo docs");
+
+		Instant start = Instant.now();
+		String[] fields = new String[]{"@graph.@id", "@graph.@type", "@graph.cwork:dateModified.@date", "@graph.cwork:dateCreated.@date",
+				"@graph.cwork:audience.@id", "@graph.cwork:primaryFormat.@id", "@graph.cwork:about.@id", "@graph.cwork:mentions.@id"};
+
+		for (String field : fields) {
+			collection.createIndex(Indexes.ascending(field));
+		}
+
+		LOGGER.info("Indexing completed in {} ms", Duration.between(start, Instant.now()).toMillis());
+	}
+
+	private void createGDBIndex(Configuration configuration) {
+		String insertIndex = String.format(INDEX_QUERY,
+				configuration.getString(Configuration.MONGODB_HOST),
+				configuration.getString(Configuration.MONGODB_PORT),
+				configuration.getString(Configuration.MONGODB_DATABASE),
+				configuration.getString(Configuration.MONGODB_COLLECTION));
+		Repository repo = new HTTPRepository(configuration.getString(Configuration.ENDPOINT_URL));
+		repo.initialize();
+
+		try (RepositoryConnection conn = repo.getConnection()) {
+			conn.prepareUpdate(insertIndex).execute();
+		}
+
+		repo.shutDown();
+		LOGGER.info("Mongo index in GDB created");
 	}
 
 	private void fixMongoDates() throws ParseException {

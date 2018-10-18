@@ -26,14 +26,11 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
-import org.eclipse.rdf4j.rio.jsonld.JSONLDWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -184,7 +181,7 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 						withCtx.add(statement.getSubject(), statement.getPredicate(), statement.getObject(), id);
 					}
 
-					Document doc = Utils.modelToJsonLd(withCtx);
+					Document doc = Utils.modelToDocument(withCtx);
 
 					executionTimeMs = System.currentTimeMillis();
 					if (queryType.equals(QueryType.INSERT)) {
