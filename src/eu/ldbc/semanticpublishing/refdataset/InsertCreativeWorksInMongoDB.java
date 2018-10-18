@@ -4,6 +4,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import eu.ldbc.semanticpublishing.mongo.Utils;
 import eu.ldbc.semanticpublishing.properties.Configuration;
 import org.apache.commons.io.input.BOMInputStream;
 import org.bson.Document;
@@ -45,10 +46,6 @@ public class InsertCreativeWorksInMongoDB {
 
 	private static Logger LOGGER = LoggerFactory.getLogger(InsertCreativeWorksInMongoDB.class.getName());
 
-	public static void main(String[] args) {
-		new InsertCreativeWorksInMongoDB(new Configuration());
-	}
-
 	public InsertCreativeWorksInMongoDB(Configuration configuration) {
 
 		BATCH_SIZE = configuration.getInt(Configuration.MONGODB_BATCH_SIZE);
@@ -62,10 +59,7 @@ public class InsertCreativeWorksInMongoDB {
 			writerConfig.set(JSONLDSettings.JSONLD_MODE, JSONLDMode.COMPACT);
 
 			long startProcess = System.currentTimeMillis();
-			mongoClient = new MongoClient(configuration.getString(Configuration.MONGODB_HOST)
-					, configuration.getInt(Configuration.MONGODB_PORT));
-			MongoDatabase database = mongoClient.getDatabase(configuration.getString(Configuration.MONGODB_DATABASE));
-			collection = database.getCollection(configuration.getString(Configuration.MONGODB_COLLECTION));
+			collection = Utils.getCollection(configuration);
 			collection.drop();
 
 			generateJSONLDStrings(file);

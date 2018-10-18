@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
 import eu.ldbc.semanticpublishing.properties.Definitions;
 import eu.ldbc.semanticpublishing.refdataset.DataManager;
 import eu.ldbc.semanticpublishing.refdataset.model.Entity;
@@ -20,7 +21,7 @@ import eu.ldbc.semanticpublishing.util.RdfUtils;
  * A class extending the MustacheTemplateCompiler, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/editorial/insert.txt
  */
-public class InsertTemplate extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class InsertTemplate extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "insert.txt";
 	
@@ -45,7 +46,7 @@ public class InsertTemplate extends MustacheTemplate implements SubstitutionPara
 	}
 	
 	public InsertTemplate(String contextURI, RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, boolean initializeCWEntity, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.contextURI = contextURI;
 		this.ru = ru;
 		this.seedYear = definitions.getInt(Definitions.YEAR_SEED);
@@ -505,11 +506,6 @@ public class InsertTemplate extends MustacheTemplate implements SubstitutionPara
 			}
 		}
 		return sb.toString();
-	}
-	
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
 	}
 	
 	@Override

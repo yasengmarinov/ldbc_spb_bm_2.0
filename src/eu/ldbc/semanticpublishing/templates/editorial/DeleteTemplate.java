@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
 import eu.ldbc.semanticpublishing.refdataset.DataManager;
 import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
 import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
@@ -14,7 +15,7 @@ import eu.ldbc.semanticpublishing.util.RandomUtil;
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/editorial/delete.txt
  */
-public class DeleteTemplate extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class DeleteTemplate extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "delete.txt"; 
@@ -22,12 +23,12 @@ public class DeleteTemplate extends MustacheTemplate implements SubstitutionPara
 	private final RandomUtil ru;
 	
 	public DeleteTemplate(RandomUtil ru, HashMap<String, String> queryTemplates) {
-		super(queryTemplates, null);
+		super(queryTemplates, null, templateFileName);
 		this.ru = ru;
 	}
 	
 	public DeleteTemplate(RandomUtil ru, HashMap<String, String> queryTemplates, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 	}
 	
@@ -55,11 +56,6 @@ public class DeleteTemplate extends MustacheTemplate implements SubstitutionPara
 			}
 		}
 		return sb.toString();
-	}
-
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
 	}
 
 	@Override

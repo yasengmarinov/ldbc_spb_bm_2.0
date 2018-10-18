@@ -27,7 +27,11 @@ public class UpdateTemplate extends InsertTemplate {
 	}	
 	
 	@Override
-	public String getTemplateFileName() {
+	public String getTemplateFileName()
+	{
+		if (isMongoTemplate()) {
+			return super.getTemplateFileName();
+		}
 		return templateFileName;
 	}
 	

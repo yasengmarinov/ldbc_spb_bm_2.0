@@ -33,30 +33,37 @@ PREFIX cwork:<http://www.bbc.co.uk/ontologies/creativework/>
 PREFIX ot:<http://www.ontotext.com/>
 PREFIX inst: <http://www.ontotext.com/connectors/mongodb/instance#>
 PREFIX : <http://www.ontotext.com/connectors/mongodb#>
-
 #  Query Name : AnalyzeReferenceData
 #  Query Description : Retrieves the greatest ID of Creative Work stored. Next Creative Works will have new IDs greater than existing.
 SELECT ?maxCwID
 FROM ot:disable-sameAs
 {
     {
-        ?search a inst:spb100 ;
-                :aggregate  '''[
-                             {
-                             "$match": {}},
-                             {"$sort": {"@graph.@id": -1}},
-                             {"$limit": 1},
-                             ]''' ;
-                :entity ?cwUri .
+        select ?maxCwID {
+            ?search a inst:spb100 ;
+                    :aggregate '''[
+{"$match": {}},
+{"$count": "size"},
+{"$project": {"custom.size": "$size"}}
+]''' ;
+     :entity ?cwUri .
+            graph inst:spb100 {
+                ?s inst:size ?maxCwID .
+            }
+        }
     }
     UNION
     {
-        ?cwUri a cwork:CreativeWork .
+        select ?maxCwID {
+            ?cwUri a cwork:CreativeWork .
+            BIND(str(?cwUri) AS ?strCwUri) .
+            BIND(replace(?strCwUri, "http://www.bbc.co.uk/things/", "", "i") AS ?cwTmp) .
+            BIND(replace(?cwTmp, "#id", "", "i") AS ?cwTmp2) .
+            BIND(xsd:decimal(?cwTmp2) AS ?maxCwID) .
+        }
+        ORDER BY DESC(?maxCwID)
+        LIMIT 1
     }
-    BIND(str(?cwUri) AS ?strCwUri) .
-    BIND(replace(?strCwUri, "http://www.bbc.co.uk/things/", "", "i") AS ?cwTmp) .
-    BIND(replace(?cwTmp, "#id", "", "i") AS ?cwTmp2) .
-    BIND(xsd:decimal(?cwTmp2) AS ?maxCwID) .
 }
 ORDER BY DESC(?maxCwID)
 LIMIT 1

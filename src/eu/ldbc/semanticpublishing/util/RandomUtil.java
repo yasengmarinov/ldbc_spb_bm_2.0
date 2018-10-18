@@ -146,7 +146,7 @@ public class RandomUtil {
 	/**
 	 * Produces a xsd:dateTime literal for current time and date
 	 */
-	public String currentDateTimeString() {
+	public synchronized String currentDateTimeString() {
 		CALENDAR.setTimeInMillis(System.currentTimeMillis());
 
 		int year = CALENDAR.get(Calendar.YEAR);
@@ -192,7 +192,7 @@ public class RandomUtil {
 	 * Produces a xsd:dateTime literal from given parameter Date
 	 *   e.g. "2011-10-21T20:55:58.379+03:00"^^xsd:dateTime
 	 */	
-	public String dateTimeString(Date date) {
+	public synchronized String dateTimeString(Date date) {
 		CALENDAR.setTime(date);
 		
 		int year = CALENDAR.get(Calendar.YEAR);
@@ -209,7 +209,7 @@ public class RandomUtil {
 	 * Produces a xsd:dateTime literal from given parameter Date
 	 *   e.g. "2011-10-21T20:55:58.379+03:00"^^xsd:dateTime
 	 */
-	public String timestamp(Date date) {
+	public synchronized String timestamp(Date date) {
 		CALENDAR.setTime(date);
 
 		int year = CALENDAR.get(Calendar.YEAR);
@@ -225,7 +225,7 @@ public class RandomUtil {
 	/**
 	 * Produces a random Date object with a fixed offset of YEARS_OFFSET years from now
 	 */
-	public Date randomDateTime() {
+	public synchronized Date randomDateTime() {
 		int year = seedYear;
 		if ((dataGenerationPeriodYears - 1) > 0) {
 			year += nextInt(dataGenerationPeriodYears);
@@ -257,7 +257,7 @@ public class RandomUtil {
 	/**
 	 * Produces a random Date object starting with 1.1.seedYear and a random offset of maxDaysAfterSeedYear
 	 */
-	public Date randomDateTime(int maxDaysAfter) {
+	public synchronized Date randomDateTime(int maxDaysAfter) {
 		int year = seedYear;
 		if ((dataGenerationPeriodYears - 1) > 0) {
 			year += nextInt(dataGenerationPeriodYears);
@@ -277,7 +277,7 @@ public class RandomUtil {
 	 * than zero, will use the random behavior from randomDateTime() method
 	 * Using maxMonth - Jan=1, Dec=12 
 	 */
-	public Date randomDateTime(int maxYear, int maxMonth) {
+	public synchronized Date randomDateTime(int maxYear, int maxMonth) {
 		int year = maxYear;
 		
 		if (maxYear < 0) {
