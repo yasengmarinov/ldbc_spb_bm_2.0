@@ -1,16 +1,12 @@
 package eu.ldbc.semanticpublishing.refdataset;
 
 import com.mongodb.MongoClient;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.Indexes;
 import eu.ldbc.semanticpublishing.mongo.Utils;
 import eu.ldbc.semanticpublishing.properties.Configuration;
 import org.apache.commons.io.input.BOMInputStream;
 import org.bson.Document;
-import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 import org.eclipse.rdf4j.common.io.GZipUtil;
 import org.eclipse.rdf4j.common.io.UncloseableInputStream;
 import org.eclipse.rdf4j.common.io.ZipUtil;
@@ -83,10 +79,6 @@ public class InsertCreativeWorksInMongoDB {
 			createGDBIndex(configuration);
 
 			LOGGER.info("Whole process took " + (System.currentTimeMillis() - startProcess) + " ms!");
-
-			// Dates in documents should taken and converted from strings to Date objects
-			// which MongoDB converts internal in ISODate objects
-			fixMongoDates();
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage(), e);
 		} finally {
@@ -125,34 +117,6 @@ public class InsertCreativeWorksInMongoDB {
 
 		repo.shutDown();
 		LOGGER.info("Mongo index in GDB created");
-	}
-
-	private void fixMongoDates() throws ParseException {
-		FindIterable<Document> documents = collection.find();
-		LOGGER.info("Fixing dates in MongoDB...");
-
-		int count = 0;
-
-		for (Document doc : documents) {
-			ObjectId id = doc.getObjectId("_id");
-			List<Map<String, Object>> graph = (List<Map<String, Object>>) doc.get("@graph");
-			Document created = (Document) graph.get(0).get("cwork:dateCreated");
-			Document modified = (Document) graph.get(0).get("cwork:dateModified");
-
-			Bson newCreatedValue = new Document("@graph.0.cwork:dateCreated.@date", dateFormat.parse(created.getString("@value")));
-			Bson updateCreatedDocument = new Document("$set", newCreatedValue);
-			collection.updateOne(new Document("_id", id), updateCreatedDocument);
-
-			Bson newModifiedValue = new Document("@graph.0.cwork:dateModified.@date", dateFormat.parse(modified.getString("@value")));
-			Bson updateModifiedDocument = new Document("$set", newModifiedValue);
-			collection.updateOne(new Document("_id", id), updateModifiedDocument);
-
-			if (++count % 10000 == 0) {
-				LOGGER.info("Processed docs: {}", count);
-			}
-		}
-
-		LOGGER.info("Total processed docs: {}", count);
 	}
 
 	private void generateJSONLDStrings(File file) throws Exception {
@@ -198,7 +162,9 @@ public class InsertCreativeWorksInMongoDB {
 		List<Document> batch = new LinkedList<Document>();
 
 		for (String currDoc : convertedDocs) {
-			batch.add(Document.parse(currDoc));
+			Document document = Document.parse(currDoc);
+			addMongoDates(document);
+			batch.add(document);
 			if (batch.size() == BATCH_SIZE) {
 				collection.insertMany(batch);
 				batch.clear();
@@ -394,6 +360,46 @@ public class InsertCreativeWorksInMongoDB {
 			}
 		} catch (IOException e) {
 			LOGGER.error(e.getMessage(), e);
+		}
+	}
+
+	/** Dates in documents should be taken and converted from strings to Date objects
+	  * which MongoDB converts internal in ISODate objects
+	  */
+	private void addMongoDates(Document doc) {
+		try {
+			List<Map<String, Object>> graph = (List<Map<String, Object>>) doc.get("@graph");
+
+			for (Map.Entry currentValue : graph.get(0).entrySet()) {
+				Object object = graph.get(0).get(currentValue.getKey());
+				if (object instanceof Document) {
+					addDateToDoc((Document) object);
+				} else if (object instanceof ArrayList) {
+					addDateToDoc((ArrayList<Object>) object);
+				}
+			}
+		} catch (Exception e) {
+			LOGGER.error(e.getMessage(), e);
+		}
+	}
+
+	private void addDateToDoc(ArrayList<Object> objects) throws ParseException {
+		for (Object object : objects) {
+			if (object instanceof Document) {
+				for (Map.Entry currentValue : ((Document) object).entrySet()) {
+					if (currentValue.getValue() instanceof Document) {
+						addDateToDoc((Document) currentValue.getValue());
+					} else if (currentValue.getValue() instanceof ArrayList) {
+						addDateToDoc((ArrayList<Object>) currentValue.getValue());
+					}
+				}
+			}
+		}
+	}
+
+	private void addDateToDoc(Document doc) throws ParseException {
+		if (doc.get("@type") != null && doc.get("@type").equals("xsd:dateTime")) {
+			doc.put("@date", dateFormat.parse(doc.get("@value").toString()));
 		}
 	}
 }
