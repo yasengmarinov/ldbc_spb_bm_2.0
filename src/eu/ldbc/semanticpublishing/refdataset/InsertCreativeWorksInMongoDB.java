@@ -92,8 +92,8 @@ public class InsertCreativeWorksInMongoDB {
 		LOGGER.info("Begin indexing of mongo docs");
 
 		Instant start = Instant.now();
-		String[] fields = new String[]{"@graph.@id", "@graph.@type", "@graph.cwork:dateModified.@date", "@graph.cwork:dateCreated.@date",
-				"@graph.cwork:audience.@id", "@graph.cwork:primaryFormat.@id", "@graph.cwork:about.@id", "@graph.cwork:mentions.@id"};
+		String[] fields = new String[]{"@graph.0.@id", "@graph.0.@type", "@graph.0.cwork:dateModified.@date", "@graph.0.cwork:dateCreated.@date",
+				"@graph.0.cwork:audience.@id", "@graph.0.cwork:primaryFormat.@id", "@graph.0.cwork:about.@id", "@graph.0.cwork:mentions.@id"};
 
 		for (String field : fields) {
 			collection.createIndex(Indexes.ascending(field));

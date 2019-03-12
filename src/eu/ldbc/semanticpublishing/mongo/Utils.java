@@ -92,8 +92,8 @@ public class Utils {
 			Document dc = ((Document) doc.get("@graph", List.class).get(0)).get("cwork:dateCreated", Document.class);
 			Document dm = ((Document) doc.get("@graph", List.class).get(0)).get("cwork:dateModified", Document.class);
 
-			instrumentDate(dc);
-			instrumentDate(dm);
+			extendDate(dc);
+			extendDate(dm);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -101,7 +101,7 @@ public class Utils {
 		return doc;
 	}
 
-	private static synchronized void instrumentDate(Document doc) throws ParseException {
+	private static synchronized void extendDate(Document doc) throws ParseException {
 		Date date = dateFormat.parse(doc.getString("@value"));
 		doc.append("@date", date);
 	}
