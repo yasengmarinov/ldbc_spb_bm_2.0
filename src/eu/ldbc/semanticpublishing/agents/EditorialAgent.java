@@ -183,6 +183,32 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 
 					Document doc = Utils.modelToDocument(withCtx);
 
+					long cwNextId = ru.nextInt((int) DataManager.creativeWorksNextId.get());
+					String uri = ru.numberURI("context", cwNextId, true, true);
+
+					InsertTemplate insertQuery = new InsertTemplate(uri, ru, queryTemplates, definitions) {
+						@Override
+						protected boolean isMongoTemplate() {
+							return false;
+						}
+					};
+
+					queryName = insertQuery.getTemplateFileName();
+					queryString = insertQuery.compileMustacheTemplate();
+
+					String delteQuery = "CLEAR GRAPH " + uri;
+					String provenance = String.format("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+							"PREFIX pr: <http://www.ontotext.com/provenance/>\n" +
+							"select * {\n" +
+							"    values ?g {\n" +
+							"        %s\n" +
+							"    }\n" +
+							"    ?g pr:derivedFrom ?ctx .\n" +
+							"    ?ctx pr:subject ?subject .\n" +
+							"    ?ctx pr:predicate ?predicate.\n" +
+							"    ?ctx pr:object ?object .\n" +
+							"}", uri);
+
 					executionTimeMs = System.currentTimeMillis();
 					if (queryType.equals(QueryType.INSERT)) {
 						coll.insertOne(doc);
@@ -190,6 +216,10 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 					else {
 						coll.replaceOne(matchClause, doc);
 					}
+					queryExecuteManager.executeQueryWithStringResult(connection, queryName, queryString, queryType, false, false);
+					queryExecuteManager.executeQueryWithStringResult(connection, queryName, provenance, QueryType.SELECT, false, false);
+					queryExecuteManager.executeQueryWithStringResult(connection, queryName, delteQuery, queryType, false, false);
+
 				}
 			}
 
