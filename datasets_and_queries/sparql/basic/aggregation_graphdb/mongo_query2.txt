@@ -69,7 +69,7 @@ WHERE {
             :aggregate '''[
   {
     "$match": {
-      "@graph.@id": "{{{cwUri}}}"
+      "@graph.0.@id": "{{{cwUri}}}"
     }
   }
 ]''' ;

@@ -68,7 +68,7 @@ WHERE {
             {
                 ?search a inst:spb100 ;
                         :aggregate '''[
-{"$match": {"@graph.@id": "{{{cwUri}}}"}},
+{"$match": {"@graph.0.@id": "{{{cwUri}}}"}},
 ]''' ;
      :entity ?entity.
                 graph inst:spb100 {
@@ -85,7 +85,7 @@ WHERE {
     {
         bind (
             '''
-[{"$facet":{"default":[{"$limit":1},{"$project":{"value":"0"}}],"actual":[{"$match":{"@graph.cwork:$matchTo.@id":{"$in":["$matchFrom"]}}},{"$project":{"collapsed":{"$reduce":{"input":"$@graph.cwork:$matchTo.@id","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$group":{"_id":"null","abouts":{"$push":"$collapsed"}}},{"$project":{"collapsed":{"$reduce":{"input":"$abouts","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$project":{"filtered":{"$filter":{"input":"$collapsed","cond":{"$in":["$$this",["$matchFrom"]]}}}}},{"$project":{"value":{"$size":"$filtered"}}}]}},{"$project":{"@id":"_:b","aggregate:count.@value":{"$max":[0,{"$max":"$actual.value"}]}}}]'''
+[{"$facet":{"default":[{"$limit":1},{"$project":{"value":"0"}}],"actual":[{"$match":{"@graph.0.cwork:$matchTo.@id":{"$in":["$matchFrom"]}}},{"$project":{"collapsed":{"$reduce":{"input":"$@graph.0.cwork:$matchTo.@id","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$group":{"_id":"null","abouts":{"$push":"$collapsed"}}},{"$project":{"collapsed":{"$reduce":{"input":"$abouts","initialValue":[],"in":{"$concatArrays":[{"$cond":{"if":{"$isArray":"$$value"},"then":"$$value","else":["$$value"]}},{"$cond":{"if":{"$isArray":"$$this"},"then":"$$this","else":["$$this"]}}]}}}}},{"$project":{"filtered":{"$filter":{"input":"$collapsed","cond":{"$in":["$$this",["$matchFrom"]]}}}}},{"$project":{"value":{"$size":"$filtered"}}}]}},{"$project":{"@id":"_:b","aggregate:count.@value":{"$max":[0,{"$max":"$actual.value"}]}}}]'''
             as ?template
         )
         {
@@ -135,7 +135,7 @@ WHERE {
         {
             values ?template2 {
                 '''[
-{"$match": {"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}]}},
+{"$match": {"@graph.0.cwork:tag.@id": {"$in": ["$arg1"]}}},
 {"$sort": {"@graph.cwork:dateModified.@date": -1}},
 {"$limit": 10}
 ]'''

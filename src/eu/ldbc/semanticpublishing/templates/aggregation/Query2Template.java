@@ -1,21 +1,21 @@
 package eu.ldbc.semanticpublishing.templates.aggregation;
 
+import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
+import eu.ldbc.semanticpublishing.properties.Definitions;
+import eu.ldbc.semanticpublishing.refdataset.DataManager;
+import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.util.RandomUtil;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.HashMap;
-
-import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
-import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
-import eu.ldbc.semanticpublishing.properties.Definitions;
-import eu.ldbc.semanticpublishing.refdataset.DataManager;
-import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
-import eu.ldbc.semanticpublishing.util.RandomUtil;
 
 /**
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query2.txt
  */
-public class Query2Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query2Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "query2.txt"; 
@@ -23,7 +23,7 @@ public class Query2Template extends MustacheTemplate implements SubstitutionPara
 	private final RandomUtil ru;	
 	
 	public Query2Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 	}
 	
@@ -44,16 +44,11 @@ public class Query2Template extends MustacheTemplate implements SubstitutionPara
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < amount; i++) {
 			sb.setLength(0);
-			sb.append(cwUri());
+			sb.append(cwUri().replace("<", "").replace(">", ""));
 			sb.append("\n");
 			bw.write(sb.toString());
 		}
 		return null;
-	}
-	
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
 	}
 	
 	@Override

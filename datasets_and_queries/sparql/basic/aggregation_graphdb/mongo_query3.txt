@@ -60,45 +60,38 @@ WHERE {
         {
           "$or": [
             {
-              "@graph.cwork:primaryFormat.@id": "cwork:TextualFormat"
+              "@graph.0.cwork:primaryFormat.@id": "cwork:TextualFormat"
             },
             {
-              "@graph.cwork:primaryFormat.@id": "cwork:InteractiveFormat"
+              "@graph.0.cwork:primaryFormat.@id": "cwork:InteractiveFormat"
             },
             {
-              "@graph.cwork:primaryFormat.@id": "cwork:PictureGalleryFormat"
+              "@graph.0.cwork:primaryFormat.@id": "cwork:PictureGalleryFormat"
             }
           ]
         },
         {
           "$or": [
             {
-              "@graph.@type": "cwork:NewsItem"
+              "@graph.0.@type": "cwork:NewsItem"
             },
             {
-              "@graph.@type": "cwork:BlogPost"
+              "@graph.0.@type": "cwork:BlogPost"
             }
           ]
         },
         {
-          "$or": [
-            {
-              "@graph.cwork:about.@id": "{{{cwAboutUri}}}"
-            },
-            {
-              "@graph.cwork:mentions.@id": "{{{cwAboutUri}}}"
-            }
-          ]
+          "@graph.0.cwork:tag.@id": "{{{cwAboutUri}}}"
         },
         {
           "$or": [
             {
-              "@graph.cwork:audience.@id": {
+              "@graph.0.cwork:audience.@id": {
                 "$exists": false
               }
             },
             {
-              "@graph.cwork:audience.@id": "{{{cwAudience}}}"
+              "@graph.0.cwork:audience.@id": "{{{cwAudience}}}"
             }
           ]
         }

@@ -1,24 +1,24 @@
 package eu.ldbc.semanticpublishing.templates.aggregation;
 
+import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
+import eu.ldbc.semanticpublishing.properties.Definitions;
+import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.util.RandomUtil;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 
-import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
-import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
-import eu.ldbc.semanticpublishing.properties.Definitions;
-import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
-import eu.ldbc.semanticpublishing.util.RandomUtil;
-
 /**
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query5.txt
  */
-public class Query5Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query5Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 	//must match with corresponding file name of the mustache template file
-	private static final String templateFileName = "query5.txt";	
+	private static final String templateFileName = "query5.txt";
 
 	private static final int TIME_UNIT = Calendar.HOUR;
 	private static final int TIME_INTERVAL = 1;
@@ -28,7 +28,7 @@ public class Query5Template extends MustacheTemplate implements SubstitutionPara
 	private final RandomUtil ru;	
 	
 	public Query5Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 		preInitialize();
 	}
@@ -87,7 +87,7 @@ public class Query5Template extends MustacheTemplate implements SubstitutionPara
 			return substitutionParameters[parameterIndex++];
 		}
 		
-		return ru.dateTimeString(initialDate);
+		return ru.timestamp(initialDate);
 	}
 	
 	/**
@@ -101,7 +101,7 @@ public class Query5Template extends MustacheTemplate implements SubstitutionPara
 		Calendar calendar = Calendar.getInstance();
 		calendar.setTime(initialDate);
 		calendar.add(TIME_UNIT, TIME_INTERVAL);
-		return ru.dateTimeString(calendar.getTime());
+		return ru.timestamp(calendar.getTime());
 	}
 	
 	@Override
@@ -122,14 +122,10 @@ public class Query5Template extends MustacheTemplate implements SubstitutionPara
 		}
 		return null;
 	}
-	
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
-	}
 
 	@Override
 	public QueryType getTemplateQueryType() {
 		return QueryType.SELECT;
 	}
+
 }

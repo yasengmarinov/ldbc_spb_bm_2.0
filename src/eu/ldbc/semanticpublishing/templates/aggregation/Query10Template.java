@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 
 import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
 import eu.ldbc.semanticpublishing.properties.Definitions;
 import eu.ldbc.semanticpublishing.refdataset.DataManager;
 import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
@@ -16,7 +17,7 @@ import eu.ldbc.semanticpublishing.util.RandomUtil;
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query10.txt
  */
-public class Query10Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query10Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "query10.txt";
 	
@@ -31,7 +32,7 @@ public class Query10Template extends MustacheTemplate implements SubstitutionPar
 	
 
 	public Query10Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 		this.calendar = Calendar.getInstance();
 		preInitialize();
@@ -60,83 +61,61 @@ public class Query10Template extends MustacheTemplate implements SubstitutionPar
 		return geonamesId;		
 	}
 	
-	/**
-	 * A method for replacing mustache template : {{{dateTimeRangeFilter}}}
-	 * with a FILTER constraint evaluating time range conditions set to generate a 1 day time range
-	 */	
-	public String dateTimeRangeFilter() {
+	public String cwStartDateTime() {
 		if (substitutionParameters != null) {
 			return substitutionParameters[parameterIndex++];
-		}		
-		
-		return generateFilterDateString2("dateModified", year, month, day, hour, minute, Calendar.HOUR_OF_DAY, 1);
+		}
+
+		return generateFilterStartDateString(year, month, day, hour, minute, Calendar.HOUR_OF_DAY, 1);
 	}
 
-	private String generateFilterDateString2(String variableName,int startYear, int startMonth, int startDay, int startHour, int startMinute, int calendarOffsetType, int offset) {
-		StringBuilder sb = new StringBuilder();
+	public String cwEndDateTime() {
+		if (substitutionParameters != null) {
+			return substitutionParameters[parameterIndex++];
+		}
+
+		return generateFilterEndDateString();
+	}
+
+	private String generateFilterStartDateString(int startYear, int startMonth, int startDay, int startHour, int startMinute, int calendarOffsetType, int offset) {
 		StringBuilder sbStartRange = new StringBuilder();
-		StringBuilder sbEndRange = new StringBuilder();
 
 		calendar.set(startYear, startMonth - 1, startDay, startHour, startMinute, 0);
 		calendar.add(calendarOffsetType, offset);
-		
-		sbStartRange.append("\"");
-		sbEndRange.append("\"");
-		
+
 		sbStartRange.append(startYear);
-		sbEndRange.append(calendar.get(Calendar.YEAR));
-		
 		sbStartRange.append("-");
-		sbEndRange.append("-");
-
 		sbStartRange.append(String.format("%02d", startMonth));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MONTH) + 1));
-
 		sbStartRange.append("-");
-		sbEndRange.append("-");
-		
 		sbStartRange.append(String.format("%02d", startDay));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH)));
-		
 		sbStartRange.append("T");
-		sbEndRange.append("T");
-		
 		sbStartRange.append(String.format("%02d", startHour));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.HOUR_OF_DAY)));
-		
 		sbStartRange.append(":");
-		sbEndRange.append(":");
-
 		sbStartRange.append(String.format("%02d", startMinute));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MINUTE)));
-		
 		sbStartRange.append(":");
-		sbEndRange.append(":");		
-		
 		sbStartRange.append("00.000Z");
-		sbEndRange.append("00.000Z");
-		
-		sbStartRange.append("\"");
-		sbEndRange.append("\"");
-		
-		sbStartRange.append("^^<http://www.w3.org/2001/XMLSchema#dateTime>");
-		sbEndRange.append("^^<http://www.w3.org/2001/XMLSchema#dateTime>");
-		
-		sb.append("FILTER(");
-		sb.append("?");
-		sb.append(variableName);
-		sb.append(" >= ");
-		sb.append(sbStartRange);
-		sb.append(" && ");
-		sb.append("?");
-		sb.append(variableName);
-		sb.append(" < ");
-		sb.append(sbEndRange);
-		sb.append(") . ");		
-		
-		return sb.toString();
+
+		return sbStartRange.toString();
 	}
-	
+
+	private String generateFilterEndDateString() {
+		StringBuilder sbEndRange = new StringBuilder();
+
+		sbEndRange.append(calendar.get(Calendar.YEAR));
+		sbEndRange.append("-");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MONTH) + 1));
+		sbEndRange.append("-");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH)));
+		sbEndRange.append("T");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.HOUR_OF_DAY)));
+		sbEndRange.append(":");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MINUTE)));
+		sbEndRange.append(":");
+		sbEndRange.append("00.000Z");
+
+		return sbEndRange.toString();
+	}
+
 	@Override
 	public String generateSubstitutionParameters(BufferedWriter bw, int amount) throws IOException {
 		StringBuilder sb = new StringBuilder();
@@ -145,18 +124,15 @@ public class Query10Template extends MustacheTemplate implements SubstitutionPar
 			sb.setLength(0);			
 			sb.append(geonamesFeatureURI());
 			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
-			sb.append(dateTimeRangeFilter());
+			sb.append(cwStartDateTime());
+			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+			sb.append(cwEndDateTime());
 			sb.append("\n");
 			bw.write(sb.toString());
 		}
 		return null;
 	}
 	
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
-	}
-
 	@Override
 	public QueryType getTemplateQueryType() {
 		return QueryType.SELECT;

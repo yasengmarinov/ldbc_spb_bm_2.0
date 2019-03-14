@@ -93,7 +93,7 @@ public class InsertCreativeWorksInMongoDB {
 
 		Instant start = Instant.now();
 		String[] fields = new String[]{"@graph.0.@id", "@graph.0.@type", "@graph.0.cwork:dateModified.@date", "@graph.0.cwork:dateCreated.@date",
-				"@graph.0.cwork:audience.@id", "@graph.0.cwork:primaryFormat.@id", "@graph.0.cwork:about.@id", "@graph.0.cwork:mentions.@id"};
+				"@graph.0.cwork:audience.@id", "@graph.0.cwork:tag.@id", "@graph.0.cwork:primaryFormat.@id", "@graph.0.cwork:about.@id", "@graph.0.cwork:mentions.@id"};
 
 		for (String field : fields) {
 			collection.createIndex(Indexes.ascending(field));

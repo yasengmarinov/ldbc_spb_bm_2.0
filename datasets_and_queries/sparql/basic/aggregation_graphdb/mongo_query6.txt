@@ -65,20 +65,13 @@ SELECT DISTINCT ?entity ?locationName ?lat ?long ?dateModified
                     BIND({{{refDeviation}}} AS ?deviation) .
                 }
             }
-            ?gn ontogeo:within(?minlat ?minlong ?maxlat ?maxlong) .
-            {
-                ?gn owl:sameAs ?geonamesId .
-            }
-            union
-            {
-                bind (?gn as ?geonamesId)
-            }
+            ?geonamesId ontogeo:within(?minlat ?minlong ?maxlat ?maxlong) .
             bind (replace(str(?geonamesId), "http://sws.geonames.org/", "geonames:") as ?tmp1)
             bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tmp2)
         }
     }
     values ?template {
-        '{"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}'
+        '{"@graph.0.cwork:tag.@id": {"$in": ["$arg1"]}}'
     }
     bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
     {

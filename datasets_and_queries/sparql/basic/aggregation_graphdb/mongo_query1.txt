@@ -77,7 +77,7 @@ WHERE {
                 :aggregate '''[
   {
     "$match": {
-      "@graph.{{{cwAboutOrMentions}}}.@id": "{{{cwAboutOrMentionsUri}}}"
+      "@graph.0.{{{cwAboutOrMentions}}}.@id": "{{{cwAboutOrMentionsUri}}}"
     }
   },
   {

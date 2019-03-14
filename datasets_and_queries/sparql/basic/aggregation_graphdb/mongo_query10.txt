@@ -59,8 +59,8 @@ SELECT DISTINCT ?creativeWork ?title ?dateModified
         '''[
 {
 "$match": {
-"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}],
-"@graph.cwork:dateModified.@date": {
+"@graph.0.cwork:tag.@id": {"$in": ["$arg1"]},
+"@graph.0.cwork:dateModified.@date": {
 "$gt": ISODate('{{{cwStartDateTime}}}'),
 "$lt": ISODate('{{{cwEndDateTime}}}')
 }

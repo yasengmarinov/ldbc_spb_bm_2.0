@@ -170,7 +170,7 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 					throw new RuntimeException("Could not get context from mongo doc :(");
 				}
 
-				Document matchClause = Document.parse("{\"@graph.@id\" : \"" + id.stringValue() + "\"}");
+				Document matchClause = Document.parse("{\"@graph.0.@id\" : \"" + id.stringValue() + "\"}");
 				if (queryType.equals(QueryType.DELETE)) {
 					executionTimeMs = System.currentTimeMillis();
 					coll.deleteOne(matchClause);

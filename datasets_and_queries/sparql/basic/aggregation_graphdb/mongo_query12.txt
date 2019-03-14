@@ -44,27 +44,17 @@ SELECT ?cworkGraph ?s ?p ?o
 #FROM ot:disable-sameAs
 WHERE {
     {
-        {
-            select (group_concat(?tagStr;
-                    separator = '", "') as ?arg1)
-            {
-                ?tag owl:sameAs {{{creativeWorkTag}}} .
-                bind (replace(str(?tag), "http://sws.geonames.org/", "geonames:") as ?tmp1)
-                bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagStr)
-            }
-        }
-        values ?template {
+        values ?query {
             '''[
 {
 "$match": {
-"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}]
+"@graph.0.cwork:tag.@id": "{{{creativeWorkTag}}}"
 }},
 {"$sort": {"@graph.cwork:dateModified.@date": -1}},
 {"$limit": 10},
-{'$addFields': {'@graph.cwork:graph.@id' :  '$@id'}}
+{'$addFields': {'@graph.0.cwork:graph.@id' :  '$@id'}}
 ]'''
         }
-        bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )
         {
             ?search a inst:spb100 ;
                     :aggregate ?query ;
