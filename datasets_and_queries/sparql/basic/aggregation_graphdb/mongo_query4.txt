@@ -48,19 +48,17 @@ CONSTRUCT {
 WHERE {
     values ?template {
         '''[
-{"$match": {"@graph.@type": "{{{cwType}}}", "@graph.cwork:primaryFormat.@id": "{{{cwFormat}}}", "@graph.cwork:about.@id": {"$in": ["$arg1"]}
+{"$match": {"@graph.@type": "{{{cwType}}}", "@graph.cwork:primaryFormat.@id": "{{{cwFormat}}}", "@graph.@id": {"$in": ["$arg1"]}
 }},
 {"$sort": {"@graph.cwork:dateCreated.@date": -1}},
 {"$limit": {{{randomLimit}}}}
 ]'''
     }
     {
-        select (group_concat(?tagsStr;
+        select (group_concat(?work;
                 separator = '", "') as ?arg1)
         where {
-            ?tags owl:sameAs {{{cwAboutUri}}};
-                  bind (replace(str(?tags), "http://sws.geonames.org/", "geonames:") as ?tmp1)
-            bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagsStr)
+            ?work  cwork:tag {{{cwAboutUri}}}.
         }
     }
     bind (replace(str(?template), "\\$arg1", ?arg1) as ?query )

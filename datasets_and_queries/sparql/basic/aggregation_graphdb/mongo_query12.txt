@@ -48,16 +48,14 @@ WHERE {
             select (group_concat(?tagStr;
                     separator = '", "') as ?arg1)
             {
-                ?tag owl:sameAs {{{creativeWorkTag}}} .
-                bind (replace(str(?tag), "http://sws.geonames.org/", "geonames:") as ?tmp1)
-                bind (replace(str(?tmp1), "http://dbpedia.org/resource/", "dbpedia:") as ?tagStr)
+                ?tagStr cwork:tag {{{creativeWorkTag}}} .
             }
         }
         values ?template {
             '''[
 {
 "$match": {
-"$or": [{"@graph.cwork:about.@id": {"$in": ["$arg1"]}}, {"@graph.cwork:mentions.@id": {"$in": ["$arg1"]}}]
+"@graph.@id" : {$in : ["$arg1"]}
 }},
 {"$sort": {"@graph.cwork:dateModified.@date": -1}},
 {"$limit": 10},
@@ -76,4 +74,3 @@ WHERE {
         }
     }
 }
-ORDER BY ?cworkGraph ?s ?p ?o

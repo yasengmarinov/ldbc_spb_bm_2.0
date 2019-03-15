@@ -73,22 +73,31 @@ CONSTRUCT {
 FROM ot:disable-sameAs
 WHERE {
     {
-        ?search a inst:spb100 ;
-                :aggregate '''[
+    select (group_concat(?creativeWork; separator = '", "') as ?ids) where{
+            select distinct ?creativeWork where{
+              ?creativeWork {{{cwAboutOrMentions}}} {{{cwAboutOrMentionsUri}}} .
+                } limit 10
+}
+        }
+         values ?template {
+    '''[
   {
     "$match": {
-      "@graph.{{{cwAboutOrMentions}}}.@id": "{{{cwAboutOrMentionsUri}}}"
+"@graph.@id" : {$in : ["$arg1"]}
     }
   },
   {
     "$sort": {
       "@graph.cwork:dateModified.@date": -1
     }
-  },
-  {
-    "$limit": 10
   }
-]''' ;
+]'''
+}
+        bind (replace(str(?template), "\\$arg1", str(?ids)) as ?mongoQuery )
+
+{
+        ?search a inst:spb100 ;
+                :aggregate ?mongoQuery ;
                 :entity ?entity .
         graph inst:spb100 {
             ?creativeWork cwork:dateModified ?modified ;

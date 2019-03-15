@@ -1,29 +1,30 @@
 package eu.ldbc.semanticpublishing.templates.aggregation;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.HashMap;
-
 import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
-import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
 import eu.ldbc.semanticpublishing.properties.Definitions;
 import eu.ldbc.semanticpublishing.refdataset.DataManager;
 import eu.ldbc.semanticpublishing.refdataset.model.Entity;
-import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
+import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.tools.Prefixes;
 import eu.ldbc.semanticpublishing.util.RandomUtil;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query4.txt
  */
-public class Query4Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query4Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "query4.txt";
 	private final RandomUtil ru;	
 	private int creativeWorkType;
 	
 	public Query4Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 		preInitialize();
 	}
@@ -120,24 +121,29 @@ public class Query4Template extends MustacheTemplate implements SubstitutionPara
 		for (int i = 0; i < amount; i++) {
 			preInitialize();
 			sb.setLength(0);
-			sb.append(cwAboutUri());
-			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
-			sb.append(cwFormat());
-			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
-			sb.append(cwType());
-			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
-			sb.append(randomLimit());			
+			if (!isMongoTemplate()) {
+				sb.append(cwAboutUri());
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(cwFormat());
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(cwType());
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(randomLimit());
+			} else {
+				sb.append(Prefixes.compact(cwType()));
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(Prefixes.compact(cwFormat()));
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(randomLimit());
+				sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+				sb.append(cwAboutUri());
+			}
 			sb.append("\n");
 			bw.write(sb.toString());
 		}
 		return null;
 	}
 	
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
-	}
-
 	@Override
 	public QueryType getTemplateQueryType() {
 		return QueryType.DESCRIBE;

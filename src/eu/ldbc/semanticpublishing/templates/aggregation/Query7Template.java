@@ -1,24 +1,24 @@
 package eu.ldbc.semanticpublishing.templates.aggregation;
 
+import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
+import eu.ldbc.semanticpublishing.properties.Definitions;
+import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.util.RandomUtil;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.HashMap;
 
-import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
-import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
-import eu.ldbc.semanticpublishing.properties.Definitions;
-import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
-import eu.ldbc.semanticpublishing.util.RandomUtil;
-
 /**
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query7.txt
  */
-public class Query7Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query7Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "query7.txt";
-	
+
 	private final RandomUtil ru;
 	private int creativeWorkType;
 	private int year;
@@ -29,7 +29,7 @@ public class Query7Template extends MustacheTemplate implements SubstitutionPara
 	private Calendar calendar;
 	
 	public Query7Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 		this.calendar = Calendar.getInstance();
 		preInitialize();
@@ -67,94 +67,59 @@ public class Query7Template extends MustacheTemplate implements SubstitutionPara
 		return "cwork:BlogPost";
 	}
 	
-	/**
-	 * A method for replacing mustache template : {{{cwFilterdateCreatediedCondition}}}
-	 * with a FILTER constraint evaluating time range conditions
-	 */		
-	public String cwFilterdateCreatediedCondition() {	
+	public String cwStartDateTime() {
 		if (substitutionParameters != null) {
 			return substitutionParameters[parameterIndex++];
-		}		
-		
-		return generateFilterDateString2("dateCreated", year, month, day, hour, minute, Calendar.HOUR_OF_DAY, 1);
+		}
+
+		return generateFilterStartDateString(year, month, day, hour, minute, Calendar.HOUR_OF_DAY, 1);
 	}
 
-	/**
-	 * A method for replacing mustache template : {{{orderBy}}}
-	 */			
-/*	 
-	public String orderBy() {
+	public String cwEndDateTime() {
 		if (substitutionParameters != null) {
 			return substitutionParameters[parameterIndex++];
-		}		
-		
-		return "";
-	}		
-*/	
-	
-	private String generateFilterDateString2(String variableName,int startYear, int startMonth, int startDay, int startHour, int startMinute, int calendarOffsetType, int offset) {
-		StringBuilder sb = new StringBuilder();
+		}
+
+		return generateFilterEndDateString();
+	}
+
+	private String generateFilterStartDateString(int startYear, int startMonth, int startDay, int startHour, int startMinute, int calendarOffsetType, int offset) {
 		StringBuilder sbStartRange = new StringBuilder();
-		StringBuilder sbEndRange = new StringBuilder();
 
 		calendar.set(startYear, startMonth - 1, startDay, startHour, startMinute, 0);
 		calendar.add(calendarOffsetType, offset);
-		
-		sbStartRange.append("\"");
-		sbEndRange.append("\"");
-		
+
 		sbStartRange.append(startYear);
-		sbEndRange.append(calendar.get(Calendar.YEAR));
-		
 		sbStartRange.append("-");
-		sbEndRange.append("-");
-
 		sbStartRange.append(String.format("%02d", startMonth));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MONTH) + 1));
-
 		sbStartRange.append("-");
-		sbEndRange.append("-");
-		
 		sbStartRange.append(String.format("%02d", startDay));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH)));
-		
 		sbStartRange.append("T");
-		sbEndRange.append("T");
-		
 		sbStartRange.append(String.format("%02d", startHour));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.HOUR_OF_DAY)));
-		
 		sbStartRange.append(":");
-		sbEndRange.append(":");
-
 		sbStartRange.append(String.format("%02d", startMinute));
-		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MINUTE)));
-		
 		sbStartRange.append(":");
-		sbEndRange.append(":");		
-		
 		sbStartRange.append("00.000Z");
+
+		return sbStartRange.toString();
+	}
+
+	private String generateFilterEndDateString() {
+		StringBuilder sbEndRange = new StringBuilder();
+
+		sbEndRange.append(calendar.get(Calendar.YEAR));
+		sbEndRange.append("-");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MONTH) + 1));
+		sbEndRange.append("-");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH)));
+		sbEndRange.append("T");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.HOUR_OF_DAY)));
+		sbEndRange.append(":");
+		sbEndRange.append(String.format("%02d", calendar.get(Calendar.MINUTE)));
+		sbEndRange.append(":");
 		sbEndRange.append("00.000Z");
-		
-		sbStartRange.append("\"");
-		sbEndRange.append("\"");
-		
-		sbStartRange.append("^^<http://www.w3.org/2001/XMLSchema#dateTime>");
-		sbEndRange.append("^^<http://www.w3.org/2001/XMLSchema#dateTime>");
-		
-		sb.append("FILTER(");
-		sb.append("?");
-		sb.append(variableName);
-		sb.append(" >= ");
-		sb.append(sbStartRange);
-		sb.append(" && ");
-		sb.append("?");
-		sb.append(variableName);
-		sb.append(" < ");
-		sb.append(sbEndRange);
-		sb.append(") . ");		
-		
-		return sb.toString();
+
+		return sbEndRange.toString();
 	}
 	
 	@Override
@@ -165,7 +130,9 @@ public class Query7Template extends MustacheTemplate implements SubstitutionPara
 			sb.setLength(0);
 			sb.append(cwType());
 			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
-			sb.append(cwFilterdateCreatediedCondition());
+			sb.append(cwStartDateTime());
+			sb.append(SubstitutionParametersGenerator.PARAMS_DELIMITER);
+			sb.append(cwEndDateTime());
 			sb.append("\n");
 			bw.write(sb.toString());
 		}
@@ -173,12 +140,7 @@ public class Query7Template extends MustacheTemplate implements SubstitutionPara
 	}
 	
 	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
-	}
-
-	@Override
 	public QueryType getTemplateQueryType() {
 		return QueryType.SELECT;
-	}		
+	}
 }

@@ -54,7 +54,6 @@ select ?creativeWork ?dateCreated ?title ?category ?liveCoverage ?audience {
     "$lt": ISODate('{{{cwEndDateTime}}}')
   }
 }''' ;
-            :hint '{"@graph.@type": 1}' ;
             :project '''{
   "@graph.@id": 1,
   "@context": 1,

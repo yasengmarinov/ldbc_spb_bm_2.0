@@ -64,7 +64,6 @@ WHERE {
     }
   }
 ]''' ;
-            :hint '{"@graph.@type": 1}' ;
             :entity ?entity .
     graph inst:spb100 {
         { ?creativeWork cwork:about ?topic . }

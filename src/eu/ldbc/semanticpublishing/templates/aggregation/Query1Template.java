@@ -1,22 +1,24 @@
 package eu.ldbc.semanticpublishing.templates.aggregation;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.HashMap;
-
 import eu.ldbc.semanticpublishing.endpoint.SparqlQueryConnection.QueryType;
-import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.mongo.MongoAwareTemplate;
+import eu.ldbc.semanticpublishing.properties.Configuration;
 import eu.ldbc.semanticpublishing.properties.Definitions;
 import eu.ldbc.semanticpublishing.refdataset.DataManager;
 import eu.ldbc.semanticpublishing.refdataset.model.Entity;
-import eu.ldbc.semanticpublishing.templates.MustacheTemplate;
+import eu.ldbc.semanticpublishing.substitutionparameters.SubstitutionParametersGenerator;
+import eu.ldbc.semanticpublishing.tools.Prefixes;
 import eu.ldbc.semanticpublishing.util.RandomUtil;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * A class extending the MustacheTemplate, used to generate a query string
  * corresponding to file Configuration.QUERIES_PATH/aggregation/query1.txt
  */
-public class Query1Template extends MustacheTemplate implements SubstitutionParametersGenerator {
+public class Query1Template extends MongoAwareTemplate implements SubstitutionParametersGenerator {
 
 	//must match with corresponding file name of the mustache template file
 	private static final String templateFileName = "query1.txt"; 
@@ -24,7 +26,7 @@ public class Query1Template extends MustacheTemplate implements SubstitutionPara
 	private final RandomUtil ru;
 		
 	public Query1Template(RandomUtil ru, HashMap<String, String> queryTemplates, Definitions definitions, String[] substitutionParameters) {
-		super(queryTemplates, substitutionParameters);
+		super(queryTemplates, substitutionParameters, templateFileName);
 		this.ru = ru;
 	}
 	
@@ -61,8 +63,8 @@ public class Query1Template extends MustacheTemplate implements SubstitutionPara
 		} else {
 			e = DataManager.regularEntitiesList.get(ru.nextInt(DataManager.regularEntitiesList.size()));
 		}
-		
-		return e.getURI();
+
+		return Configuration.INSTANCE.getBoolean(Configuration.MONGO_RUN)? Prefixes.compact(e.getURI()) : e.getURI();
 	}
 	
 	@Override
@@ -79,11 +81,6 @@ public class Query1Template extends MustacheTemplate implements SubstitutionPara
 		return null;
 	}
 
-	@Override
-	public String getTemplateFileName() {
-		return templateFileName;
-	}
-	
 	@Override
 	public QueryType getTemplateQueryType() {
 		return QueryType.CONSTRUCT;
