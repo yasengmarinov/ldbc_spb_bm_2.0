@@ -169,10 +169,17 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 				if (id == null) {
 					throw new RuntimeException("Could not get context from mongo doc :(");
 				}
+				long cwNextId = Long.valueOf(id.stringValue().replace("http://www.bbc.co.uk/things/", "").replace("#id", ""));
 
 				Document matchClause = Document.parse("{\"@graph.@id\" : \"" + id.stringValue() + "\"}");
+
+				String uri = ru.numberURI("context", cwNextId, true, true);
+
 				if (queryType.equals(QueryType.DELETE)) {
 					executionTimeMs = System.currentTimeMillis();
+					String delteQuery = "CLEAR GRAPH " + uri;
+					queryExecuteManager.executeQueryWithStringResult(connection, queryName, delteQuery, queryType, false, false);
+
 					coll.deleteOne(matchClause);
 				}
 				if (queryType.equals(QueryType.UPDATE) || queryType.equals(QueryType.INSERT)) {
@@ -183,6 +190,28 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 
 					Document doc = Utils.modelToDocument(withCtx);
 
+					if (queryType.equals(QueryType.INSERT)) {
+						InsertTemplate insertQuery = new InsertTemplate(uri, ru, queryTemplates, definitions) {
+							@Override
+							protected boolean isMongoTemplate() {
+								return false;
+							}
+						};
+
+						queryName = insertQuery.getTemplateFileName();
+						queryString = insertQuery.compileMustacheTemplate();
+					} else {
+						UpdateTemplate updateTemplate = new UpdateTemplate(uri, ru, queryTemplates, definitions) {
+							@Override
+							protected boolean isMongoTemplate() {
+								return false;
+							}
+						};
+
+						queryName = updateTemplate.getTemplateFileName();
+						queryString = updateTemplate.compileMustacheTemplate();
+					}
+
 					executionTimeMs = System.currentTimeMillis();
 					if (queryType.equals(QueryType.INSERT)) {
 						coll.insertOne(doc);
@@ -190,6 +219,7 @@ public class EditorialAgent extends AbstractAsynchronousAgent {
 					else {
 						coll.replaceOne(matchClause, doc);
 					}
+					queryExecuteManager.executeQueryWithStringResult(connection, queryName, queryString, queryType, false, false);
 				}
 			}
 
